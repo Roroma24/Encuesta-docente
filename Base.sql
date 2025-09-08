@@ -13,11 +13,13 @@ CREATE TABLE docentes (
 
 CREATE TABLE semestre (
     id_semestre INT AUTO_INCREMENT PRIMARY KEY,
+    id_docente INT NOT NULL,
     numero ENUM("1","2","3","4","5","6","7","8","9"),
     materia VARCHAR(256),
     curso VARCHAR(256),
     fecha_i DATE,
-    fecha_fin DATE
+    fecha_fin DATE,
+    FOREIGN KEY (id_docente) REFERENCES docentes(id_docente)
 );
 
 CREATE TABLE evaluacion (
@@ -60,12 +62,12 @@ VALUES
 ('Ana', 'Martínez', 'Soto', 'D3456789', 'ana.martinez@uvm.mx', 'Sistemas Computacionales'),
 ('Luis', 'Hernández', 'Pérez', 'D4567890', 'luis.hernandez@uvm.mx', 'Matemáticas');
 
-INSERT INTO semestre (numero, materia, curso, fecha_i, fecha_fin)
+INSERT INTO semestre (id_docente, numero, materia, curso, fecha_i, fecha_fin)
 VALUES 
-("5", "Bases de Datos", "BD-501", "2025-08-12", "2025-12-15"),
-("6", "Redes de Computadoras", "RC-601", "2025-08-12", "2025-12-15"),
-("7", "Seguridad Informática", "SI-701", "2025-08-12", "2025-12-15"),
-("8", "Arquitectura de Software", "AS-801", "2025-08-12", "2025-12-15");
+(1, "5", "Bases de Datos", "BD-501", "2025-08-12", "2025-12-15"),
+(2, "6", "Redes de Computadoras", "RC-601", "2025-08-12", "2025-12-15"),
+(3, "7", "Seguridad Informática", "SI-701", "2025-08-12", "2025-12-15"),
+(4, "8", "Arquitectura de Software", "AS-801", "2025-08-12", "2025-12-15");
 
 /***Consultas***/
 -- Ver todos los docentes

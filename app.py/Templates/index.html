@@ -8,20 +8,36 @@
     <h1>Selecciona un docente y semestre</h1>
     <form action="/encuesta" method="POST">
         <label>Docente:</label>
-        <select name="id_docente" required>
+        <select name="id_docente" id="id_docente" required onchange="cargarSemestres()">
             {% for d in docentes %}
             <option value="{{d.id_docente}}">{{d.nombre}} {{d.apellidop}} {{d.apellidom}}</option>
             {% endfor %}
         </select>
         <br><br>
         <label>Semestre:</label>
-        <select name="id_semestre" required>
-            {% for s in semestres %}
-            <option value="{{s.id_semestre}}">Semestre {{s.numero}} - {{s.materia}}</option>
-            {% endfor %}
+        <select name="id_semestre" id="id_semestre" required>
+            <!-- Los semestres se llenarán dinámicamente -->
         </select>
         <br><br>
         <button type="submit">Comenzar Encuesta</button>
     </form>
+    <script>
+    function cargarSemestres() {
+        var docenteId = document.getElementById('id_docente').value;
+        fetch('/semestres/' + docenteId)
+            .then(response => response.json())
+            .then(data => {
+                var select = document.getElementById('id_semestre');
+                select.innerHTML = '';
+                data.forEach(function(s) {
+                    var option = document.createElement('option');
+                    option.value = s.id_semestre;
+                    option.text = 'Semestre ' + s.numero + ' - ' + s.materia;
+                    select.appendChild(option);
+                });
+            });
+    }
+    window.onload = cargarSemestres;
+    </script>
 </body>
 </html>

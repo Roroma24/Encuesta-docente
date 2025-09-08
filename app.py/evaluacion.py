@@ -16,10 +16,14 @@ def index():
     cursor.execute("SELECT * FROM docentes")
     docentes = cursor.fetchall()
 
-    cursor.execute("SELECT * FROM semestre")
-    semestres = cursor.fetchall()
+    return render_template("index.html", docentes=docentes)
 
-    return render_template("index.html", docentes=docentes, semestres=semestres)
+@app.route("/semestres/<int:id_docente>")
+def semestres_por_docente(id_docente):
+    cursor.execute("SELECT * FROM semestre WHERE id_docente = %s", (id_docente,))
+    semestres = cursor.fetchall()
+    return semestres if request.accept_mimetypes['application/json'] else {'semestres': semestres}
+    # Flask automáticamente serializa a JSON si se retorna una lista y el header es application/json
 
 @app.route("/encuesta", methods=["POST"])
 def encuesta():
