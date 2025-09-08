@@ -39,10 +39,16 @@ def encuesta():
 
     # Preguntas (puedes agregar más aquí)
     preguntas = [
-        "¿Explica claramente los conceptos?",
-        "¿Fomenta la participación en clase?",
-        "¿Entrega retroalimentación útil?",
-        "¿Utiliza recursos tecnológicos apropiados?"
+        "¿Qué tan claro y comprensible explica los temas durante la clase?",
+        "¿En qué medida domina el contenido de la materia que imparte?",
+        "¿Qué tan bien responde a las dudas o preguntas de los estudiantes?",
+        "¿Qué tan organizado(a) es al estructurar y presentar los contenidos?",
+        "¿Qué tanto fomenta la participación activa de los alumnos en clase?",
+        "¿En qué medida utiliza ejemplos prácticos o aplicaciones reales para explicar los temas?",
+        "¿Qué tan efectivo(a) es al utilizar recursos didácticos o tecnológicos para apoyar su enseñanza?",
+        "¿Qué tan justo(a) y claro(a) es al evaluar el desempeño de los estudiantes?",
+        "¿Qué tanto motiva a los estudiantes a interesarse en la materia?",
+        "¿Qué tan accesible y disponible está fuera de clase para apoyar a los estudiantes?"
     ]
 
     return render_template("encuesta.html", id_eval=id_eval, preguntas=preguntas)
