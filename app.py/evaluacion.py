@@ -6,7 +6,7 @@ app = Flask(__name__)
 db = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="Saltamontes71#",
+    password="Ror@$2405",
     database="evaluacion_d"
 )
 cursor = db.cursor(dictionary=True)
@@ -27,10 +27,9 @@ def semestres_por_docente(id_docente):
 
 @app.route("/encuesta", methods=["POST"])
 def encuesta():
-    id_docente = request.form.get("id_docente")
-    id_semestre = request.form.get("id_semestre")
+    id_docente = request.form["id_docente"]
+    id_semestre = request.form["id_semestre"]
 
-    # Inserción segura con parámetros
     cursor.execute(
         "INSERT INTO evaluacion (id_docente, id_semestre) VALUES (%s, %s)",
         (id_docente, id_semestre)
@@ -55,27 +54,24 @@ def encuesta():
 
 @app.route("/guardar", methods=["POST"])
 def guardar():
-    id_eval = request.form.get("id_eval")
+    id_eval = request.form["id_eval"]
 
     for key in request.form:
         if key.startswith("pregunta_"):
-            pregunta = request.form.get(key)
+            pregunta = request.form[key]
             respuesta = request.form.get(f"respuesta_{key.split('_')[1]}")
             escala = request.form.get(f"escala_{key.split('_')[1]}")
-
-            # Evita inyección SQL usando parámetros
             cursor.execute(
                 "INSERT INTO respuestas (id_evaluacion, pregunta, respuesta, escala) VALUES (%s, %s, %s, %s)",
                 (id_eval, pregunta, respuesta, escala)
             )
-
     db.commit()
 
     comentario = request.form.get("comentario")
-    if comentario and comentario.strip():
+    if comentario:
         cursor.execute(
             "INSERT INTO comentarios (id_evaluacion, comentario) VALUES (%s, %s)",
-            (id_eval, comentario.strip())
+            (id_eval, comentario)
         )
         db.commit()
 
