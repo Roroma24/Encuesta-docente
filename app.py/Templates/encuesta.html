@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Encuesta</title>
+</head>
+<body>
+    <h1>Encuesta Docente</h1>
+    <form action="/guardar" method="POST">
+        <input type="hidden" name="id_eval" value="{{id_eval}}">
+
+        {% for p in preguntas %}
+            <div>
+                <p><strong>{{loop.index}}. {{p}}</strong></p>
+                <input type="hidden" name="pregunta_{{loop.index}}" value="{{p}}">
+                Respuesta: <input type="text" name="respuesta_{{loop.index}}" required><br>
+                Escala (1 a 5):
+                <select name="escala_{{loop.index}}">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                </select>
+            </div>
+            <hr>
+        {% endfor %}
+
+        <label>Comentario adicional:</label><br>
+        <textarea name="comentario"></textarea><br><br>
+
+        <button type="submit">Enviar</button>
+    </form>
+</body>
+</html>

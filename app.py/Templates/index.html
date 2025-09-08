@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Encuesta Docente</title>
+</head>
+<body>
+    <h1>Selecciona un docente y semestre</h1>
+    <form action="/encuesta" method="POST">
+        <label>Docente:</label>
+        <select name="id_docente" required>
+            {% for d in docentes %}
+            <option value="{{d.id_docente}}">{{d.nombre}} {{d.apellidop}} {{d.apellidom}}</option>
+            {% endfor %}
+        </select>
+        <br><br>
+        <label>Semestre:</label>
+        <select name="id_semestre" required>
+            {% for s in semestres %}
+            <option value="{{s.id_semestre}}">Semestre {{s.numero}} - {{s.materia}}</option>
+            {% endfor %}
+        </select>
+        <br><br>
+        <button type="submit">Comenzar Encuesta</button>
+    </form>
+</body>
+</html>

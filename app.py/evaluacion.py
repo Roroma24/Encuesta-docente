@@ -1,0 +1,79 @@
+from flask import Flask, render_template, request, redirect, url_for
+import mysql.connector
+
+app = Flask(__name__)
+
+# Conexión con MySQL
+db = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="Ror@$2405",
+    database="evaluacion_d"
+)
+cursor = db.cursor(dictionary=True)
+
+# === Página inicial ===
+@app.route("/")
+def index():
+    cursor.execute("SELECT * FROM docentes")
+    docentes = cursor.fetchall()
+
+    cursor.execute("SELECT * FROM semestre")
+    semestres = cursor.fetchall()
+
+    return render_template("index.html", docentes=docentes, semestres=semestres)
+
+# === Formulario de encuesta ===
+@app.route("/encuesta", methods=["POST"])
+def encuesta():
+    id_docente = request.form["id_docente"]
+    id_semestre = request.form["id_semestre"]
+
+    # Crear evaluación
+    cursor.execute(
+        "INSERT INTO evaluacion (id_docente, id_semestre) VALUES (%s, %s)",
+        (id_docente, id_semestre)
+    )
+    db.commit()
+    id_eval = cursor.lastrowid
+
+    # Preguntas (puedes agregar más aquí)
+    preguntas = [
+        "¿Explica claramente los conceptos?",
+        "¿Fomenta la participación en clase?",
+        "¿Entrega retroalimentación útil?",
+        "¿Utiliza recursos tecnológicos apropiados?"
+    ]
+
+    return render_template("encuesta.html", id_eval=id_eval, preguntas=preguntas)
+
+# === Guardar respuestas ===
+@app.route("/guardar", methods=["POST"])
+def guardar():
+    id_eval = request.form["id_eval"]
+
+    # Guardar cada respuesta
+    for key in request.form:
+        if key.startswith("pregunta_"):
+            pregunta = request.form[key]
+            respuesta = request.form.get(f"respuesta_{key.split('_')[1]}")
+            escala = request.form.get(f"escala_{key.split('_')[1]}")
+            cursor.execute(
+                "INSERT INTO respuestas (id_evaluacion, pregunta, respuesta, escala) VALUES (%s, %s, %s, %s)",
+                (id_eval, pregunta, respuesta, escala)
+            )
+    db.commit()
+
+    # Guardar comentario opcional
+    comentario = request.form.get("comentario")
+    if comentario:
+        cursor.execute(
+            "INSERT INTO comentarios (id_evaluacion, comentario) VALUES (%s, %s)",
+            (id_eval, comentario)
+        )
+        db.commit()
+
+    return render_template("resultado.html")
+
+if __name__ == "__main__":
+    app.run(debug=True)
