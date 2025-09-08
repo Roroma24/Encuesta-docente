@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, jsonify
 import mysql.connector
 
 app = Flask(__name__)
@@ -6,7 +6,7 @@ app = Flask(__name__)
 db = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="Ror@$2405",
+    password="Saltamontes71#",
     database="evaluacion_d"
 )
 cursor = db.cursor(dictionary=True)
@@ -15,20 +15,22 @@ cursor = db.cursor(dictionary=True)
 def index():
     cursor.execute("SELECT * FROM docentes")
     docentes = cursor.fetchall()
-
     return render_template("index.html", docentes=docentes)
 
 @app.route("/semestres/<int:id_docente>")
 def semestres_por_docente(id_docente):
+    # Consulta segura con parámetros
     cursor.execute("SELECT * FROM semestre WHERE id_docente = %s", (id_docente,))
     semestres = cursor.fetchall()
-    return semestres if request.accept_mimetypes['application/json'] else {'semestres': semestres}
-    # Flask automáticamente serializa a JSON si se retorna una lista y el header es application/json
+    # Retorna JSON si lo piden con Accept: application/json
+    if request.accept_mimetypes['application/json']:
+        return jsonify(semestres)
+    return {'semestres': semestres}
 
 @app.route("/encuesta", methods=["POST"])
 def encuesta():
-    id_docente = request.form["id_docente"]
-    id_semestre = request.form["id_semestre"]
+    id_docente = request.form.get("id_docente")
+    id_semestre = request.form.get("id_semestre")
 
     cursor.execute(
         "INSERT INTO evaluacion (id_docente, id_semestre) VALUES (%s, %s)",
@@ -54,13 +56,14 @@ def encuesta():
 
 @app.route("/guardar", methods=["POST"])
 def guardar():
-    id_eval = request.form["id_eval"]
+    id_eval = request.form.get("id_eval")
 
     for key in request.form:
         if key.startswith("pregunta_"):
-            pregunta = request.form[key]
-            respuesta = request.form.get(f"respuesta_{key.split('_')[1]}")
-            escala = request.form.get(f"escala_{key.split('_')[1]}")
+            pregunta = request.form.get(key, "").strip()
+            respuesta = request.form.get(f"respuesta_{key.split('_')[1]}", "").strip()
+            escala = request.form.get(f"escala_{key.split('_')[1]}", "").strip()
+
             cursor.execute(
                 "INSERT INTO respuestas (id_evaluacion, pregunta, respuesta, escala) VALUES (%s, %s, %s, %s)",
                 (id_eval, pregunta, respuesta, escala)
@@ -68,10 +71,10 @@ def guardar():
     db.commit()
 
     comentario = request.form.get("comentario")
-    if comentario:
+    if comentario and comentario.strip():
         cursor.execute(
             "INSERT INTO comentarios (id_evaluacion, comentario) VALUES (%s, %s)",
-            (id_eval, comentario)
+            (id_eval, comentario.strip())
         )
         db.commit()
 
