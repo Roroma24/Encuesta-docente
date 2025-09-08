@@ -1,7 +1,6 @@
 CREATE DATABASE IF NOT EXISTS evaluacion_d;
 USE evaluacion_d;
 
--- Tabla de docentes
 CREATE TABLE docentes (
     id_docente INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(256) NOT NULL,
@@ -12,7 +11,6 @@ CREATE TABLE docentes (
     departamento VARCHAR(256) NOT NULL
 );
 
--- Tabla de semestres
 CREATE TABLE semestre (
     id_semestre INT AUTO_INCREMENT PRIMARY KEY,
     numero ENUM("1","2","3","4","5","6","7","8","9"),
@@ -22,7 +20,6 @@ CREATE TABLE semestre (
     fecha_fin DATE
 );
 
--- Evaluación general (una por encuestado/docente/semestre)
 CREATE TABLE evaluacion (
     id_evaluacion INT AUTO_INCREMENT PRIMARY KEY,
     id_docente INT NOT NULL,
@@ -32,7 +29,6 @@ CREATE TABLE evaluacion (
     FOREIGN KEY (id_semestre) REFERENCES semestre(id_semestre)
 );
 
--- Respuestas a preguntas (todas ligadas a un id_evaluacion)
 CREATE TABLE respuestas (
     id_respuesta INT AUTO_INCREMENT PRIMARY KEY,
     id_evaluacion INT NOT NULL,
@@ -42,7 +38,6 @@ CREATE TABLE respuestas (
     FOREIGN KEY (id_evaluacion) REFERENCES evaluacion(id_evaluacion)
 );
 
--- Resumen global de la evaluación
 CREATE TABLE criterios (
     id_criterios INT AUTO_INCREMENT PRIMARY KEY,
     resumen ENUM("Deficiente", "Regular", "Bueno", "Muy bueno", "Excelente"),
@@ -50,7 +45,6 @@ CREATE TABLE criterios (
     FOREIGN KEY (id_evaluacion) REFERENCES evaluacion(id_evaluacion)
 );
 
--- Comentarios adicionales
 CREATE TABLE comentarios (
     id_comentario INT AUTO_INCREMENT PRIMARY KEY,
     id_evaluacion INT NOT NULL,
@@ -59,7 +53,6 @@ CREATE TABLE comentarios (
     FOREIGN KEY (id_evaluacion) REFERENCES evaluacion(id_evaluacion)
 );
 
--- Datos de prueba
 INSERT INTO docentes (nombre, apellidop, apellidom, matricula, correo, departamento)
 VALUES 
 ('María', 'González', 'López', 'D1234567', 'maria.gonzalez@uvm.mx', 'Ingeniería'),

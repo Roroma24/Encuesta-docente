@@ -3,7 +3,6 @@ import mysql.connector
 
 app = Flask(__name__)
 
-# Conexión con MySQL
 db = mysql.connector.connect(
     host="localhost",
     user="root",
@@ -12,7 +11,6 @@ db = mysql.connector.connect(
 )
 cursor = db.cursor(dictionary=True)
 
-# === Página inicial ===
 @app.route("/")
 def index():
     cursor.execute("SELECT * FROM docentes")
@@ -23,13 +21,11 @@ def index():
 
     return render_template("index.html", docentes=docentes, semestres=semestres)
 
-# === Formulario de encuesta ===
 @app.route("/encuesta", methods=["POST"])
 def encuesta():
     id_docente = request.form["id_docente"]
     id_semestre = request.form["id_semestre"]
 
-    # Crear evaluación
     cursor.execute(
         "INSERT INTO evaluacion (id_docente, id_semestre) VALUES (%s, %s)",
         (id_docente, id_semestre)
@@ -37,7 +33,6 @@ def encuesta():
     db.commit()
     id_eval = cursor.lastrowid
 
-    # Preguntas (puedes agregar más aquí)
     preguntas = [
         "¿Qué tan claro y comprensible explica los temas durante la clase?",
         "¿En qué medida domina el contenido de la materia que imparte?",
@@ -53,12 +48,10 @@ def encuesta():
 
     return render_template("encuesta.html", id_eval=id_eval, preguntas=preguntas)
 
-# === Guardar respuestas ===
 @app.route("/guardar", methods=["POST"])
 def guardar():
     id_eval = request.form["id_eval"]
 
-    # Guardar cada respuesta
     for key in request.form:
         if key.startswith("pregunta_"):
             pregunta = request.form[key]
@@ -70,7 +63,6 @@ def guardar():
             )
     db.commit()
 
-    # Guardar comentario opcional
     comentario = request.form.get("comentario")
     if comentario:
         cursor.execute(

@@ -1,13 +1,13 @@
 body {
     background: #f4f6fa;
-    color: #222c3a;
+    color: #5a2d2d;
     font-family: 'Segoe UI', Arial, sans-serif;
     margin: 0;
     padding: 0;
 }
 
 h1 {
-    color: #2563eb;
+    color: #eb2525;
     text-align: center;
     margin-top: 30px;
 }
@@ -38,7 +38,7 @@ select, input[type="text"], textarea {
 }
 
 button {
-    background: #2563eb;
+    background: #eb2525;
     color: #fff;
     border: none;
     border-radius: 5px;
@@ -49,7 +49,7 @@ button {
 }
 
 button:hover {
-    background: #174ea6;
+    background: #a61717;
 }
 
 hr {
@@ -59,7 +59,7 @@ hr {
 }
 
 a {
-    color: #2563eb;
+    color: #eb2525;
     text-decoration: none;
     font-weight: 500;
 }
