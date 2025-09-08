@@ -67,3 +67,11 @@ a {
 a:hover {
     text-decoration: underline;
 }
+
+body {
+    background-image: url('https://scontent.fmex23-1.fna.fbcdn.net/v/t39.30808-6/485143947_1055674196596501_9039140679979182406_n.jpg?stp=cp6_dst-jpg_tt6&_nc_cat=101&ccb=1-7&_nc_sid=127cfc&_nc_eui2=AeEBqfUk6BeZHr3MCfLeqcnXevHfLMel0bN68d8sx6XRszt2OnmmSFuRt2UE4nBoVElGyazKD2ljK4bFltb6FpPF&_nc_ohc=d3pPcVNvULUQ7kNvwGZBX5H&_nc_oc=AdkAJIDdRuyq9vekUvWYQKmV69gRW7xlmAKxOnMOyrzgTl2hnRKRdhQ7b4PTBr5mXL2Dn55l6--eC8wAx6AUkPHu&_nc_zt=23&_nc_ht=scontent.fmex23-1.fna&_nc_gid=sh49kS_cOyxiaLXsArY5vw&oh=00_AfanuJSYlMBXQ7_46wpqTy6qB3sBl03_5Vw5kG44jlR15g&oe=68C50A16');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-position: center center;
+}
