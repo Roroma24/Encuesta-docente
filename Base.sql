@@ -68,8 +68,8 @@ VALUES
 (1, "5", "Bases de Datos", "BD-501", "2025-08-12", "2025-12-15"),
 (2, "6", "Redes de Computadoras", "RC-601", "2025-08-12", "2025-12-15"),
 (3, "7", "Seguridad Informática", "SI-701", "2025-08-12", "2025-12-15"),
-(4, "8", "Arquitectura de Software", "AS-801", "2025-08-12", "2025-12-15");
-(4, "1", "Física", "F-101", "2025-08-12", "2025-12-15");
+(4, "8", "Arquitectura de Software", "AS-801", "2025-08-12", "2025-12-15"),
+(4, "1", "Física", "F-101", "2025-08-12", "2025-12-15"),
 (4, "3", "Cálculo Diferencial", "CD-301", "2025-08-12", "2025-12-15");
 
 INSERT INTO alumnos (matricula, nombre, apellidop, apellidom, correo)
