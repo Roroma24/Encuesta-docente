@@ -3,6 +3,36 @@
 <head>
     <title>Encuesta</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        .range-label {
+            display: inline-block;
+            width: 40px;
+            text-align: center;
+            font-weight: bold;
+            color: #eb2525;
+        }
+        .range-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        input[type="range"].red-range {
+            accent-color: #eb2525;
+            width: 250px;
+            height: 6px;
+            background: linear-gradient(90deg, #ffcccc 0%, #eb2525 100%);
+            border-radius: 5px;
+            margin: 0 10px;
+        }
+        .scale-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9em;
+            color: #eb2525;
+            margin: 0 0 10px 0;
+            width: 270px;
+        }
+    </style>
 </head>
 <body>
     <h1>Encuesta Docente</h1>
@@ -13,15 +43,20 @@
             <div>
                 <p><strong>{{loop.index}}. {{p}}</strong></p>
                 <input type="hidden" name="pregunta_{{loop.index}}" value="{{p}}">
-                Respuesta: <input type="text" name="respuesta_{{loop.index}}" required><br>
-                Escala ("1 Deficiente", "2 Regular", "3 Bueno", "4 Muy Bueno", "5 Excelente"):
-                <select name="escala_{{loop.index}}">
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5">5</option>
-                </select>
+                <div class="scale-labels">
+                    <span>1</span>
+                    <span>2</span>
+                    <span>3</span>
+                    <span>4</span>
+                    <span>5</span>
+                </div>
+                <div class="range-container">
+                    <input type="range" class="red-range" name="escala_{{loop.index}}" id="escala_{{loop.index}}" min="1" max="5" value="3" required oninput="document.getElementById('val_{{loop.index}}').innerText = this.value;">
+                    <span class="range-label" id="val_{{loop.index}}">3</span>
+                </div>
+                <div style="font-size:0.9em; color:#555;">
+                    1 Deficiente &nbsp; 2 Regular &nbsp; 3 Bueno &nbsp; 4 Muy Bueno &nbsp; 5 Excelente
+                </div>
             </div>
             <hr>
         {% endfor %}

@@ -20,6 +20,9 @@
         <br><br>
         <button type="submit">Comenzar Encuesta</button>
     </form>
+    <div style="text-align:center; margin-top:20px;">
+        <a href="{{ url_for('logout') }}" style="color:#eb2525;">Cerrar sesión</a>
+    </div>
     <script>
     function cargarSemestres() {
         var docenteId = document.getElementById('id_docente').value;

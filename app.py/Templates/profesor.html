@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Panel Docente</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        .panel-box {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(34,44,58,0.08);
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 30px 40px;
+        }
+        .panel-title {
+            color: #eb2525;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #bfc9d8;
+            text-align: center;
+        }
+        th {
+            background: #eb2525;
+            color: #fff;
+        }
+        .logout-link {
+            display: inline-block;
+            padding: 8px 18px;
+            background: #eb2525;
+            color: #fff;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 15px;
+            margin-top: 10px;
+        }
+        .logout-link:hover {
+            background: #a61717;
+        }
+    </style>
+</head>
+<body>
+    <div class="panel-box">
+        <h2 class="panel-title">Resultados de Evaluaciones</h2>
+        <table>
+            <tr>
+                <th>Nombre</th>
+                <th>Apellido Paterno</th>
+                <th>Apellido Materno</th>
+                <th>Semestre</th>
+                <th>Materia</th>
+                <th>Curso</th>
+                <th>Inicio</th>
+                <th>Fin</th>
+                <th>Total Puntos</th>
+                <th>Respuestas</th>
+                <th>Promedio</th>
+                <th>Evaluación Final</th>
+            </tr>
+            {% for r in resultados %}
+            <tr>
+                <td>{{ r.nombre_docente }}</td>
+                <td>{{ r.apellidop }}</td>
+                <td>{{ r.apellidom }}</td>
+                <td>{{ r.semestre_numero }}</td>
+                <td>{{ r.materia }}</td>
+                <td>{{ r.curso }}</td>
+                <td>{{ r.fecha_i }}</td>
+                <td>{{ r.fecha_fin }}</td>
+                <td>{{ r.total_puntos }}</td>
+                <td>{{ r.total_respuestas }}</td>
+                <td style="color:#eb2525; font-weight:bold;">{{ r.promedio }}</td>
+                <td style="font-weight:bold;">{{ r.evaluacion_final }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <a href="{{ url_for('logout') }}" class="logout-link">Cerrar sesión</a>
+    </div>
+</body>
+</html>
