@@ -1,70 +1,214 @@
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
     <title>Encuesta</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
     <style>
-        .range-label {
-            display: inline-block;
-            width: 40px;
-            text-align: center;
-            font-weight: bold;
-            color: #eb2525;
-        }
-        .range-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+      body {
+        font-family: 'Roboto', Arial, sans-serif;
+      }
+      form {
+        max-width: 600px;
+        margin: 40px auto;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 4px 24px rgba(235,37,37,0.08);
+        padding: 32px 24px;
+      }
+      h1 {
+        text-align: center;
+        color: #eb2525;
+        margin-bottom: 32px;
+      }
+      .pregunta-block {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 32px;
+        width: 100%;
+      }
+      .pregunta-block p {
+        width: 100%;
+        text-align: center;
+        margin-bottom: 12px;
+        font-size: 1.08em;
+        font-family: 'Roboto', Arial, sans-serif;
+      }
+      .escala-grid {
+        display: grid;
+        grid-template-rows: 22px 38px 22px;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0px;
+        width: 100%;
+        max-width: 800px; /* aún más ancho */
+        margin: 0 auto 8px auto;
+        align-items: center;
+        justify-items: center;
+      }
+      .escala-num {
+        color: #eb2525;
+        font-weight: bold;
+        font-size: 1em;
+        text-align: center;
+        margin-bottom: 0;
+        font-family: 'Roboto', Arial, sans-serif;
+        letter-spacing: 2px;
+      }
+      .escala-slider-cell {
+        grid-column: 1 / 6;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        margin-top: 8px;
+        margin-bottom: 8px;
+      }
+      input[type="range"].red-range {
+        accent-color: #eb2525;
+        width: 100%;
+        max-width: 700px; /* aún más ancho */
+        height: 36px;     /* aún más grueso */
+        background: linear-gradient(90deg, #ffcccc 0%, #eb2525 100%);
+        border-radius: 18px;
+        margin: 0;
+        box-shadow: 0 2px 18px rgba(235,37,37,0.16);
+        display: block;
+      }
+      .range-label {
+        display: inline-block;
+        width: 44px;
+        text-align: center;
+        font-weight: bold;
+        color: #eb2525;
+        font-size: 1.25em;
+        background: #ffeaea;
+        border-radius: 8px;
+        box-shadow: 0 1px 4px rgba(235,37,37,0.07);
+        margin-left: 18px;
+        position: relative;
+        top: 4px;
+        font-family: 'Roboto', Arial, sans-serif;
+      }
+      .escala-etiqueta {
+        font-size: 0.95em;
+        color: #444;
+        text-align: center;
+        margin-top: 0;
+        font-weight: 500;
+        white-space: nowrap;
+        font-family: 'Roboto', Arial, sans-serif;
+        padding: 0 4px;
+        letter-spacing: 1px;
+      }
+      /* Centrado horizontal para toda la escala */
+      .pregunta-block .escala-grid {
+        margin-left: auto;
+        margin-right: auto;
+      }
+      /* Centrar el valor del slider */
+      .escala-slider-cell {
+        justify-content: center;
+      }
+      textarea {
+        width: 100%;
+        min-height: 60px;
+        border-radius: 8px;
+        border: 1px solid #eb2525;
+        padding: 8px;
+        margin-top: 8px;
+        font-size: 1em;
+        resize: vertical;
+        font-family: 'Roboto', Arial, sans-serif;
+      }
+      button[type="submit"] {
+        display: block;
+        margin: 24px auto 0 auto;
+        background: #eb2525;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 32px;
+        font-size: 1.1em;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(235,37,37,0.10);
+        transition: background 0.2s;
+        font-family: 'Roboto', Arial, sans-serif;
+      }
+      button[type="submit"]:hover {
+        background: #c41e1e;
+      }
+      hr {
+        border: none;
+        border-top: 1px solid #eee;
+        margin: 24px 0;
+      }
+      @media (max-width: 900px) {
+        .escala-grid {
+          max-width: 98vw;
         }
         input[type="range"].red-range {
-            accent-color: #eb2525;
-            width: 250px;
-            height: 6px;
-            background: linear-gradient(90deg, #ffcccc 0%, #eb2525 100%);
-            border-radius: 5px;
-            margin: 0 10px;
+          max-width: 98vw;
+          height: 22px;
         }
-        .scale-labels {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.9em;
-            color: #eb2525;
-            margin: 0 0 10px 0;
-            width: 270px;
+        .range-label {
+          font-size: 1em;
+          width: 32px;
+          margin-left: 8px;
         }
+        .escala-num, .escala-etiqueta {
+          font-size: 0.9em;
+        }
+      }
     </style>
-</head>
-<body>
-    <h1>Encuesta Docente</h1>
+  </head>
+  <body>
     <form action="/guardar" method="POST">
-        <input type="hidden" name="id_eval" value="{{id_eval}}">
+      <input type="hidden" name="id_eval" value="{{id_eval}}" />
+      <h1>Encuesta Docente</h1>
+      {% for p in preguntas %}
+      <div class="pregunta-block">
+        <p><strong>{{loop.index}}. {{p}}</strong></p>
+        <input type="hidden" name="pregunta_{{loop.index}}" value="{{p}}" />
+        <div class="escala-grid">
+          <span class="escala-num">1</span>
+          <span class="escala-num">2</span>
+          <span class="escala-num">3</span>
+          <span class="escala-num">4</span>
+          <span class="escala-num">5</span>
+          <div class="escala-slider-cell">
+            <input
+              type="range"
+              class="red-range"
+              name="escala_{{loop.index}}"
+              id="escala_{{loop.index}}"
+              min="1"
+              max="5"
+              value="3"
+              required
+              oninput="document.getElementById('val_{{loop.index}}').innerText = this.value;"
+            />
+            <span class="range-label" id="val_{{loop.index}}">3</span>
+          </div>
+          <span class="escala-etiqueta">Deficiente</span>
+          <span class="escala-etiqueta">Regular</span>
+          <span class="escala-etiqueta">Bueno</span>
+          <span class="escala-etiqueta">Muy Bueno</span>
+          <span class="escala-etiqueta">Excelente</span>
+        </div>
+      </div>
+      <hr />
+      {% endfor %}
 
-        {% for p in preguntas %}
-            <div>
-                <p><strong>{{loop.index}}. {{p}}</strong></p>
-                <input type="hidden" name="pregunta_{{loop.index}}" value="{{p}}">
-                <div class="scale-labels">
-                    <span>1</span>
-                    <span>2</span>
-                    <span>3</span>
-                    <span>4</span>
-                    <span>5</span>
-                </div>
-                <div class="range-container">
-                    <input type="range" class="red-range" name="escala_{{loop.index}}" id="escala_{{loop.index}}" min="1" max="5" value="3" required oninput="document.getElementById('val_{{loop.index}}').innerText = this.value;">
-                    <span class="range-label" id="val_{{loop.index}}">3</span>
-                </div>
-                <div style="font-size:0.9em; color:#555;">
-                    1 Deficiente &nbsp; 2 Regular &nbsp; 3 Bueno &nbsp; 4 Muy Bueno &nbsp; 5 Excelente
-                </div>
-            </div>
-            <hr>
-        {% endfor %}
+      <label>Comentario adicional:</label><br />
+      <textarea name="comentario"></textarea><br /><br />
 
-        <label>Comentario adicional:</label><br>
-        <textarea name="comentario"></textarea><br><br>
-
-        <button type="submit">Enviar</button>
+      <button type="submit">Enviar</button>
     </form>
-</body>
+  </body>
+</html>
 </html>

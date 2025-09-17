@@ -5,8 +5,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>Selecciona un docente y semestre</h1>
+    
     <form action="/encuesta" method="POST">
+        <h1>Selecciona un docente y semestre</h1>
         <label>Docente:</label>
         <select name="id_docente" id="id_docente" required onchange="cargarSemestres()">
             {% for d in docentes %}
@@ -18,11 +19,20 @@
         <select name="id_semestre" id="id_semestre" required>
         </select>
         <br><br>
-        <button type="submit">Comenzar Encuesta</button>
-    </form>
-    <div style="text-align:center; margin-top:20px;">
-        <a href="{{ url_for('logout') }}" style="color:#eb2525;">Cerrar sesión</a>
+        <div style="text-align:center; margin-top:20px;">
+            <button type="submit" style="background-color:#4CAF50; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">
+                Comenzar Encuesta
+            </button>
+        </div>
+        <div style="text-align:center; margin-top:20px;">
+        <form action="{{ url_for('logout') }}" method="POST" style="display:inline;">
+            <button type="submit" style="background-color:#eb2525; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">
+                Cerrar sesión
+            </button>
+        </form>
     </div>
+    </form>
+    
     <script>
     function cargarSemestres() {
         var docenteId = document.getElementById('id_docente').value;
