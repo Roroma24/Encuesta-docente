@@ -22,13 +22,24 @@ CREATE TABLE semestre (
     FOREIGN KEY (id_docente) REFERENCES docentes(id_docente)
 );
 
+CREATE TABLE alumnos (
+    id_alumno INT AUTO_INCREMENT PRIMARY KEY,
+    matricula VARCHAR(10) NOT NULL UNIQUE,
+    nombre VARCHAR(256) NOT NULL,
+    apellidop VARCHAR(256) NOT NULL,
+    apellidom VARCHAR(256) NOT NULL,
+    correo VARCHAR(256) UNIQUE NOT NULL
+);
+
 CREATE TABLE evaluacion (
     id_evaluacion INT AUTO_INCREMENT PRIMARY KEY,
     id_docente INT NOT NULL,
     id_semestre INT NOT NULL,
+    id_alumno INT NOT NULL,
     fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (id_docente) REFERENCES docentes(id_docente),
-    FOREIGN KEY (id_semestre) REFERENCES semestre(id_semestre)
+    FOREIGN KEY (id_semestre) REFERENCES semestre(id_semestre),
+    FOREIGN KEY (id_alumno) REFERENCES alumnos(id_alumno)
 );
 
 CREATE TABLE respuestas (
@@ -45,15 +56,6 @@ CREATE TABLE comentarios (
     comentario TEXT NOT NULL,
     fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (id_evaluacion) REFERENCES evaluacion(id_evaluacion)
-);
-
-CREATE TABLE alumnos (
-    id_alumno INT AUTO_INCREMENT PRIMARY KEY,
-    matricula VARCHAR(10) NOT NULL UNIQUE,
-    nombre VARCHAR(256) NOT NULL,
-    apellidop VARCHAR(256) NOT NULL,
-    apellidom VARCHAR(256) NOT NULL,
-    correo VARCHAR(256) UNIQUE NOT NULL
 );
 
 INSERT INTO docentes (matricula, nombre, apellidop, apellidom, correo, departamento)
