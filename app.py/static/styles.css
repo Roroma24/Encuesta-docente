@@ -62,6 +62,10 @@ a {
     color: #eb2525;
     text-decoration: none;
     font-weight: 500;
+    display: block;
+    margin: 0 auto;
+    text-align: center;
+    width: fit-content;
 }
 
 a:hover {
@@ -107,4 +111,26 @@ input[type="range"].red-range::-ms-thumb {
     width: 22px;
     height: 22px;
     box-shadow: 0 0 4px #eb2525;
+}
+a.logout-link {
+    background: #eb2525;
+    color: #fff !important;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 32px;
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(235, 37, 37, 0.10);
+    transition: background 0.2s;
+    font-family: 'Roboto', Arial, sans-serif;
+    display: block;
+    margin: 24px auto 0 auto;
+    text-align: center;
+    text-decoration: none;
+    width: fit-content;
+}
+a.logout-link:hover {
+    background: #c41e1e;
+    text-decoration: none;
 }

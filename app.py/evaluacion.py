@@ -21,6 +21,7 @@ def login():
         if alumno:
             session['tipo_usuario'] = 'alumno'
             session['matricula'] = matricula
+            session['id_alumno'] = alumno['id_alumno']  # Guardar id_alumno
             return redirect(url_for('index'))
         cursor.execute("SELECT * FROM docentes WHERE matricula = %s", (matricula,))
         docente = cursor.fetchone()
@@ -38,7 +39,17 @@ def index():
         return redirect(url_for('login'))
     cursor.execute("SELECT * FROM docentes")
     docentes = cursor.fetchall()
-    return render_template("index.html", docentes=docentes)
+    id_alumno = session.get('id_alumno')
+    # Obtener los id_semestre que el alumno ya contestó
+    cursor.execute("""
+        SELECT e.id_semestre
+        FROM evaluacion e
+        JOIN respuestas r ON e.id_evaluacion = r.id_evaluacion
+        WHERE e.id_alumno = %s
+        GROUP BY e.id_semestre
+    """, (id_alumno,))
+    semestres_contestados = {row['id_semestre'] for row in cursor.fetchall()}
+    return render_template("index.html", docentes=docentes, semestres_contestados=semestres_contestados)
 
 @app.route("/profesor")
 def profesor():
@@ -78,20 +89,32 @@ def profesor():
 
 @app.route("/semestres/<int:id_docente>")
 def semestres_por_docente(id_docente):
+    id_alumno = session.get('id_alumno')
     cursor.execute("SELECT * FROM semestre WHERE id_docente = %s", (id_docente,))
     semestres = cursor.fetchall()
+    # Filtrar los semestres que el alumno ya contestó
+    cursor.execute("""
+        SELECT e.id_semestre
+        FROM evaluacion e
+        JOIN respuestas r ON e.id_evaluacion = r.id_evaluacion
+        WHERE e.id_docente = %s AND e.id_alumno = %s
+        GROUP BY e.id_semestre
+    """, (id_docente, id_alumno))
+    semestres_contestados = {row['id_semestre'] for row in cursor.fetchall()}
+    semestres_filtrados = [s for s in semestres if s['id_semestre'] not in semestres_contestados]
     if request.accept_mimetypes['application/json']:
-        return jsonify(semestres)
-    return {'semestres': semestres}
+        return jsonify(semestres_filtrados)
+    return {'semestres': semestres_filtrados}
 
 @app.route("/encuesta", methods=["POST"])
 def encuesta():
     id_docente = request.form.get("id_docente")
     id_semestre = request.form.get("id_semestre")
-
+    id_alumno = session.get('id_alumno')
+    # Registrar el alumno en la evaluación
     cursor.execute(
-        "INSERT INTO evaluacion (id_docente, id_semestre) VALUES (%s, %s)",
-        (id_docente, id_semestre)
+        "INSERT INTO evaluacion (id_docente, id_semestre, id_alumno) VALUES (%s, %s, %s)",
+        (id_docente, id_semestre, id_alumno)
     )
     db.commit()
     id_eval = cursor.lastrowid

@@ -6,7 +6,7 @@
 </head>
 <body>
     
-    <form action="/encuesta" method="POST">
+    <form action="/encuesta" method="POST" id="formEncuesta">
         <h1>Selecciona un docente y semestre</h1>
         <label>Docente:</label>
         <select name="id_docente" id="id_docente" required onchange="cargarSemestres()">
@@ -19,20 +19,19 @@
         <select name="id_semestre" id="id_semestre" required>
         </select>
         <br><br>
-        <div style="text-align:center; margin-top:20px;">
-            <button type="submit" style="background-color:#4CAF50; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">
+        <div style="text-align:center; margin-top:20px;" id="botonEncuestaDiv">
+            <button type="submit" id="botonEncuesta" style="background-color:#4CAF50; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">
                 Comenzar Encuesta
             </button>
         </div>
-        <div style="text-align:center; margin-top:20px;">
-        <form action="{{ url_for('logout') }}" method="POST" style="display:inline;">
+    </form>
+    <div style="text-align:center; margin-top:20px;">
+        <form action="{{ url_for('logout') }}" method="GET" style="display:inline;">
             <button type="submit" style="background-color:#eb2525; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">
                 Cerrar sesión
             </button>
         </form>
     </div>
-    </form>
-    
     <script>
     function cargarSemestres() {
         var docenteId = document.getElementById('id_docente').value;
@@ -41,15 +40,22 @@
             .then(data => {
                 var select = document.getElementById('id_semestre');
                 select.innerHTML = '';
-                data.forEach(function(s) {
-                    var option = document.createElement('option');
-                    option.value = s.id_semestre;
-                    option.text = 'Semestre ' + s.numero + ' - ' + s.materia;
-                    select.appendChild(option);
-                });
+                if (data.length === 0) {
+                    // Si no hay semestres disponibles, ocultar el botón de encuesta
+                    document.getElementById('botonEncuestaDiv').style.display = 'none';
+                } else {
+                    document.getElementById('botonEncuestaDiv').style.display = 'block';
+                    data.forEach(function(s) {
+                        var option = document.createElement('option');
+                        option.value = s.id_semestre;
+                        option.text = 'Semestre ' + s.numero + ' - ' + s.materia;
+                        select.appendChild(option);
+                    });
+                }
             });
     }
     window.onload = cargarSemestres;
     </script>
 </body>
+</html>
 </html>
