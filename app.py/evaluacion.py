@@ -7,7 +7,7 @@ app.secret_key = "supersecretkey"
 db = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="Saltamontes71#",
+    password="Ror@$2405",
     database="evaluacion_d"
 )
 cursor = db.cursor(dictionary=True)
@@ -16,15 +16,25 @@ cursor = db.cursor(dictionary=True)
 def login():
     if request.method == "POST":
         matricula = request.form.get("matricula", "").strip()
-        cursor.execute("SELECT * FROM alumnos WHERE matricula = %s", (matricula,))
-        alumno = cursor.fetchone()
+        cursor.callproc("ver_alumnos")
+        alumno = None
+        for result in cursor.stored_results():
+            for row in result.fetchall():
+                if row['matricula'] == matricula:
+                    alumno = row
+                    break
         if alumno:
             session['tipo_usuario'] = 'alumno'
             session['matricula'] = matricula
-            session['id_alumno'] = alumno['id_alumno']  # Guardar id_alumno
+            session['id_alumno'] = alumno['id_alumno']
             return redirect(url_for('index'))
-        cursor.execute("SELECT * FROM docentes WHERE matricula = %s", (matricula,))
-        docente = cursor.fetchone()
+        cursor.callproc("ver_docentes")
+        docente = None
+        for result in cursor.stored_results():
+            for row in result.fetchall():
+                if row['matricula'] == matricula:
+                    docente = row
+                    break
         if docente:
             session['tipo_usuario'] = 'docente'
             session['matricula'] = matricula
@@ -37,18 +47,21 @@ def login():
 def index():
     if session.get('tipo_usuario') != 'alumno':
         return redirect(url_for('login'))
-    cursor.execute("SELECT * FROM docentes")
-    docentes = cursor.fetchall()
+    cursor.callproc("ver_docentes")
+    docentes = []
+    for result in cursor.stored_results():
+        docentes = result.fetchall()
     id_alumno = session.get('id_alumno')
-    # Obtener los id_semestre que el alumno ya contestó
-    cursor.execute("""
-        SELECT e.id_semestre
-        FROM evaluacion e
-        JOIN respuestas r ON e.id_evaluacion = r.id_evaluacion
-        WHERE e.id_alumno = %s
-        GROUP BY e.id_semestre
-    """, (id_alumno,))
-    semestres_contestados = {row['id_semestre'] for row in cursor.fetchall()}
+    cursor.callproc("ver_evaluaciones")
+    semestres_contestados = set()
+    for result in cursor.stored_results():
+        for row in result.fetchall():
+            if row['id_alumno'] == id_alumno:
+                cursor2 = db.cursor(dictionary=True)
+                cursor2.execute("SELECT id_semestre FROM evaluacion e JOIN respuestas r ON e.id_evaluacion = r.id_evaluacion WHERE e.id_evaluacion = %s GROUP BY e.id_semestre", (row['id_evaluacion'],))
+                for r in cursor2.fetchall():
+                    semestres_contestados.add(r['id_semestre'])
+                cursor2.close()
     return render_template("index.html", docentes=docentes, semestres_contestados=semestres_contestados)
 
 @app.route("/profesor")
@@ -56,51 +69,30 @@ def profesor():
     if session.get('tipo_usuario') != 'docente':
         return redirect(url_for('login'))
     id_docente = session.get('id_docente')
-    cursor.execute("""
-        SELECT 
-            d.nombre AS nombre_docente,
-            d.apellidop,
-            d.apellidom,
-            s.numero AS semestre_numero,
-            s.materia,
-            s.curso,
-            s.fecha_i,
-            s.fecha_fin,
-            SUM(CAST(r.escala AS UNSIGNED)) AS total_puntos,
-            COUNT(r.id_respuesta) AS total_respuestas,
-            ROUND(AVG(CAST(r.escala AS UNSIGNED)),2) AS promedio,
-            CASE
-                WHEN AVG(CAST(r.escala AS UNSIGNED)) >= 4.5 THEN 'Excelente profesor'
-                WHEN AVG(CAST(r.escala AS UNSIGNED)) >= 4.0 THEN 'Muy buen profesor'
-                WHEN AVG(CAST(r.escala AS UNSIGNED)) >= 3.0 THEN 'Buen profesor'
-                WHEN AVG(CAST(r.escala AS UNSIGNED)) >= 2.0 THEN 'Profesor regular'
-                ELSE 'Mal profesor'
-            END AS evaluacion_final
-        FROM docentes d
-        JOIN evaluacion e ON d.id_docente = e.id_docente
-        JOIN respuestas r ON e.id_evaluacion = r.id_evaluacion
-        JOIN semestre s ON e.id_semestre = s.id_semestre
-        WHERE d.id_docente = %s
-        GROUP BY d.id_docente, s.id_semestre
-        ORDER BY s.fecha_i DESC
-    """, (id_docente,))
-    resultados = cursor.fetchall()
+    cursor.callproc("reporte_evaluacion")
+    resultados = []
+    for result in cursor.stored_results():
+        for row in result.fetchall():
+            if row['nombre_docente'] and row.get('nombre_docente') and row.get('nombre_docente') != '':
+                cursor2 = db.cursor(dictionary=True)
+                cursor2.execute("SELECT id_docente FROM docentes WHERE nombre = %s AND apellidop = %s AND apellidom = %s", (row['nombre_docente'], row['apellidop'], row['apellidom']))
+                doc = cursor2.fetchone()
+                cursor2.close()
+                if doc and doc['id_docente'] == id_docente:
+                    resultados.append(row)
     return render_template("profesor.html", resultados=resultados)
 
 @app.route("/semestres/<int:id_docente>")
 def semestres_por_docente(id_docente):
     id_alumno = session.get('id_alumno')
-    cursor.execute("SELECT * FROM semestre WHERE id_docente = %s", (id_docente,))
-    semestres = cursor.fetchall()
-    # Filtrar los semestres que el alumno ya contestó
-    cursor.execute("""
-        SELECT e.id_semestre
-        FROM evaluacion e
-        JOIN respuestas r ON e.id_evaluacion = r.id_evaluacion
-        WHERE e.id_docente = %s AND e.id_alumno = %s
-        GROUP BY e.id_semestre
-    """, (id_docente, id_alumno))
-    semestres_contestados = {row['id_semestre'] for row in cursor.fetchall()}
+    cursor.callproc("ver_semestres_por_docente", (id_docente,))
+    semestres = []
+    for result in cursor.stored_results():
+        semestres = result.fetchall()
+    cursor.callproc("ver_semestres_contestados", (id_docente, id_alumno))
+    semestres_contestados = set()
+    for result in cursor.stored_results():
+        semestres_contestados = {row['id_semestre'] for row in result.fetchall()}
     semestres_filtrados = [s for s in semestres if s['id_semestre'] not in semestres_contestados]
     if request.accept_mimetypes['application/json']:
         return jsonify(semestres_filtrados)
@@ -111,14 +103,10 @@ def encuesta():
     id_docente = request.form.get("id_docente")
     id_semestre = request.form.get("id_semestre")
     id_alumno = session.get('id_alumno')
-    # Registrar el alumno en la evaluación
-    cursor.execute(
-        "INSERT INTO evaluacion (id_docente, id_semestre, id_alumno) VALUES (%s, %s, %s)",
-        (id_docente, id_semestre, id_alumno)
-    )
+    cursor.callproc("registrar_evaluacion", (id_docente, id_semestre, id_alumno))
     db.commit()
-    id_eval = cursor.lastrowid
-
+    cursor.execute("SELECT LAST_INSERT_ID() AS id_eval")
+    id_eval = cursor.fetchone()['id_eval']
     preguntas = [
         "¿Qué tan claro y comprensible explica los temas durante la clase?",
         "¿En qué medida domina el contenido de la materia que imparte?",
@@ -131,33 +119,22 @@ def encuesta():
         "¿Qué tanto motiva a los estudiantes a interesarse en la materia?",
         "¿Qué tan accesible y disponible está fuera de clase para apoyar a los estudiantes?"
     ]
-
     return render_template("encuesta.html", id_eval=id_eval, preguntas=preguntas)
 
 @app.route("/guardar", methods=["POST"])
 def guardar():
     id_eval = request.form.get("id_eval")
-
     for key in request.form:
         if key.startswith("pregunta_"):
             pregunta = request.form.get(key, "").strip()
             idx = key.split('_')[1]
             escala = request.form.get(f"escala_{idx}", "").strip()
-
-            cursor.execute(
-                "INSERT INTO respuestas (id_evaluacion, pregunta, escala) VALUES (%s, %s, %s)",
-                (id_eval, pregunta, escala)
-            )
+            cursor.callproc("insertar_respuesta", (id_eval, pregunta, escala))
     db.commit()
-
     comentario = request.form.get("comentario")
     if comentario and comentario.strip():
-        cursor.execute(
-            "INSERT INTO comentarios (id_evaluacion, comentario) VALUES (%s, %s)",
-            (id_eval, comentario.strip())
-        )
+        cursor.callproc("insertar_comentario", (id_eval, comentario.strip()))
         db.commit()
-
     return render_template("resultado.html")
 
 @app.route("/logout")
