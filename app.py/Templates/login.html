@@ -1,9 +1,16 @@
+<!--
+Autores: Axel Castañeda Sánchez y Luis Roberto Rodríguez Marroquin
+Descripción: Plantilla para el inicio de sesión.
+-->
+
 <!DOCTYPE html>
 <html>
 <head>
+    <!-- Encabezado del documento: título, hoja de estilos externa y estilos internos -->
     <title>Inicio de Sesión</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <style>
+        /* Caja principal del formulario de login */
         .login-box {
             background: #fff;
             border-radius: 10px;
@@ -13,10 +20,12 @@
             padding: 40px 30px;
             text-align: center;
         }
+        /* Título del formulario */
         .login-title {
             color: #eb2525;
             margin-bottom: 30px;
         }
+        /* Mensaje de error al fallar inicio de sesión */
         .error-msg {
             color: #eb2525;
             margin-bottom: 15px;
@@ -24,14 +33,23 @@
     </style>
 </head>
 <body>
+    <!-- Contenedor principal del formulario de inicio de sesión -->
     <div class="login-box">
+        <!-- Encabezado del formulario -->
         <h2 class="login-title">Inicio de Sesión</h2>
+
+        <!-- Bloque condicional: muestra el mensaje de error si existe -->
         {% if error %}
             <div class="error-msg">{{ error }}</div>
         {% endif %}
+
+        <!-- Formulario de inicio de sesión -->
         <form method="POST">
+            <!-- Campo de matrícula (obligatorio, máx. 10 caracteres) -->
             <label for="matricula">Matrícula:</label><br>
             <input type="text" id="matricula" name="matricula" required maxlength="10" style="text-align:center;"><br><br>
+            
+            <!-- Botón de envío -->
             <button type="submit">Ingresar</button>
         </form>
     </div>

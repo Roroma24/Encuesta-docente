@@ -1,3 +1,8 @@
+/***
+Autores: Axel Castañeda Sánchez y Luis Roberto Rodríguez Marroquin
+Descripción: Script SQL para crear la base de datos y las tablas necesarias para el sistema de evaluación docente.
+***/
+
 -- Crear la base de datos de evaluacion_d
 CREATE DATABASE IF NOT EXISTS evaluacion_d;
 

@@ -1,9 +1,16 @@
+<!--
+Autores: Axel Castañeda Sánchez y Luis Roberto Rodríguez Marroquin
+Descripción: Plantilla para mostrar el panel docente.
+-->
+
 <!DOCTYPE html>
 <html>
 <head>
+    <!-- Encabezado del documento: título, hoja de estilos y estilos internos -->
     <title>Panel Docente</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <style>
+        /* Caja principal del panel */
         .panel-box {
             background: #fff;
             border-radius: 10px;
@@ -12,11 +19,13 @@
             margin: 40px auto;
             padding: 30px 40px;
         }
+        /* Título centrado en rojo */
         .panel-title {
             color: #eb2525;
             text-align: center;
             margin-bottom: 30px;
         }
+        /* Estilos para la tabla de resultados */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -31,6 +40,7 @@
             background: #eb2525;
             color: #fff;
         }
+        /* Botón de cierre de sesión */
         .logout-link {
             display: inline-block;
             padding: 8px 18px;
@@ -47,9 +57,14 @@
     </style>
 </head>
 <body>
+    <!-- Contenedor principal del panel docente -->
     <div class="panel-box">
+        <!-- Título del panel -->
         <h2 class="panel-title">Resultados de Evaluaciones</h2>
+
+        <!-- Tabla de resultados dinámicos de las evaluaciones -->
         <table>
+            <!-- Encabezado de la tabla -->
             <tr>
                 <th>Nombre</th>
                 <th>Apellido Paterno</th>
@@ -64,6 +79,7 @@
                 <th>Promedio</th>
                 <th>Evaluación Final</th>
             </tr>
+            <!-- Iteración sobre los resultados enviados desde el servidor -->
             {% for r in resultados %}
             <tr>
                 <td>{{ r.nombre_docente }}</td>
@@ -76,11 +92,15 @@
                 <td>{{ r.fecha_fin }}</td>
                 <td>{{ r.total_puntos }}</td>
                 <td>{{ r.total_respuestas }}</td>
+                <!-- Resaltado especial en el promedio -->
                 <td style="color:#eb2525; font-weight:bold;">{{ r.promedio }}</td>
+                <!-- Texto en negrita para la evaluación final -->
                 <td style="font-weight:bold;">{{ r.evaluacion_final }}</td>
             </tr>
             {% endfor %}
         </table>
+
+        <!-- Enlace para cerrar sesión -->
         <a href="{{ url_for('logout') }}" class="logout-link">Cerrar sesión</a>
     </div>
 </body>

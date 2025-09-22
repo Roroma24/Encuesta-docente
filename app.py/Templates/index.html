@@ -1,13 +1,22 @@
+<!-- 
+Autores: Axel Castañeda Sánchez y Luis Roberto Rodríguez Marroquin
+Descripción: Plantilla para la página principal de la encuesta docente.
+-->
+
 <!DOCTYPE html>
 <html>
 <head>
+    <!-- Encabezado del documento: título y hoja de estilos -->
     <title>Encuesta Docente</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     
+    <!-- Formulario principal para iniciar la encuesta -->
     <form action="/encuesta" method="POST" id="formEncuesta">
         <h1>Selecciona un docente y semestre</h1>
+
+        <!-- Selección de docente (cargado dinámicamente con Jinja2) -->
         <label>Docente:</label>
         <select name="id_docente" id="id_docente" required onchange="cargarSemestres()">
             {% for d in docentes %}
@@ -15,16 +24,22 @@
             {% endfor %}
         </select>
         <br><br>
+
+        <!-- Selección de semestre (cargado dinámicamente con JS/fetch) -->
         <label>Semestre:</label>
         <select name="id_semestre" id="id_semestre" required>
         </select>
         <br><br>
+
+        <!-- Botón para iniciar la encuesta -->
         <div style="text-align:center; margin-top:20px;" id="botonEncuestaDiv">
             <button type="submit" id="botonEncuesta" style="background-color:#4CAF50; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">
                 Comenzar Encuesta
             </button>
         </div>
     </form>
+
+    <!-- Botón para cerrar sesión -->
     <div style="text-align:center; margin-top:20px;">
         <form action="{{ url_for('logout') }}" method="GET" style="display:inline;">
             <button type="submit" style="background-color:#eb2525; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">
@@ -32,6 +47,8 @@
             </button>
         </form>
     </div>
+
+    <!-- Script para cargar dinámicamente los semestres según el docente seleccionado -->
     <script>
     function cargarSemestres() {
         var docenteId = document.getElementById('id_docente').value;
@@ -44,6 +61,7 @@
                     // Si no hay semestres disponibles, ocultar el botón de encuesta
                     document.getElementById('botonEncuestaDiv').style.display = 'none';
                 } else {
+                    // Mostrar botón y cargar las opciones disponibles
                     document.getElementById('botonEncuestaDiv').style.display = 'block';
                     data.forEach(function(s) {
                         var option = document.createElement('option');
@@ -54,6 +72,7 @@
                 }
             });
     }
+    // Al cargar la página, se ejecuta automáticamente la función
     window.onload = cargarSemestres;
     </script>
 </body>

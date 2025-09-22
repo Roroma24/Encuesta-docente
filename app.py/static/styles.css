@@ -1,3 +1,9 @@
+/***
+ Autores: Axel Castañeda Sánchez y Luis Roberto Rodríguez Marroquin
+ Descripción: Estilos para la encuesta docente.
+ ***/
+
+/* Estilos generales del body */
 body {
     background: #f4f6fa;
     color: #5a2d2d;
@@ -6,12 +12,14 @@ body {
     padding: 0;
 }
 
+/* Encabezado principal (h1) */
 h1 {
     color: #eb2525;
     text-align: center;
     margin-top: 30px;
 }
 
+/* Contenedor del formulario */
 form {
     background: #fff;
     border-radius: 10px;
@@ -21,11 +29,13 @@ form {
     padding: 30px 40px;
 }
 
+/* Etiquetas y párrafos */
 label, p {
     color: #222c3a;
     font-weight: 500;
 }
 
+/* Campos de entrada de texto, selectores y textarea*/
 select, input[type="text"], textarea {
     width: 100%;
     padding: 8px;
@@ -37,6 +47,7 @@ select, input[type="text"], textarea {
     font-size: 1em;
 }
 
+/* Botones generales */
 button {
     background: #eb2525;
     color: #fff;
@@ -47,17 +58,18 @@ button {
     cursor: pointer;
     transition: background 0.2s;
 }
-
 button:hover {
     background: #a61717;
 }
 
+/* Separadores (líneas <hr>)*/
 hr {
     border: none;
     border-top: 1px solid #bfc9d8;
     margin: 20px 0;
 }
 
+/* Estilos para enlaces <a> */
 a {
     color: #eb2525;
     text-decoration: none;
@@ -67,11 +79,11 @@ a {
     text-align: center;
     width: fit-content;
 }
-
 a:hover {
     text-decoration: underline;
 }
 
+/* Fondo con imagen personalizada */
 body {
     background-image: url('uvm.jpg');
     background-size: cover;
@@ -80,6 +92,7 @@ body {
     background-position: center center;
 }
 
+/* Personalización de sliders <input type="range"> */
 input[type="range"].red-range {
     accent-color: #eb2525;
     width: 250px;
@@ -88,6 +101,7 @@ input[type="range"].red-range {
     border-radius: 5px;
     outline: none;
 }
+/* Personalización de los "thumbs" del slider en distintos navegadores */
 input[type="range"].red-range::-webkit-slider-thumb {
     background: #eb2525;
     border: 2px solid #fff;
@@ -112,6 +126,8 @@ input[type="range"].red-range::-ms-thumb {
     height: 22px;
     box-shadow: 0 0 4px #eb2525;
 }
+
+/* Enlace con estilo de botón para "Cerrar sesión" */
 a.logout-link {
     background: #eb2525;
     color: #fff !important;

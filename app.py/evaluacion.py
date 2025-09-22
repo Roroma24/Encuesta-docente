@@ -1,3 +1,8 @@
+""" 
+Autores: Axel Castañeda Sánchez y Luis Roberto Rodríguez Marroquin
+Descripción: Archivo principal de la aplicación Flask para la evaluación docente.
+"""
+
 # Importación de librerías y configuración de la app Flask
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 import mysql.connector
