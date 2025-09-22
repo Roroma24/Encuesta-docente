@@ -1,9 +1,11 @@
+# Importación de librerías y configuración de la app Flask
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 import mysql.connector
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"  
 
+# Conexión a la base de datos MySQL
 db = mysql.connector.connect(
     host="localhost",
     user="root",
@@ -12,6 +14,7 @@ db = mysql.connector.connect(
 )
 cursor = db.cursor(dictionary=True)
 
+# Ruta principal: Login de usuario (alumno o docente)
 @app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -43,6 +46,7 @@ def login():
         return render_template("login.html", error="Matrícula no encontrada")
     return render_template("login.html")
 
+# Ruta para alumnos: muestra docentes y semestres contestados
 @app.route("/inicio")
 def index():
     if session.get('tipo_usuario') != 'alumno':
@@ -64,6 +68,7 @@ def index():
                 cursor2.close()
     return render_template("index.html", docentes=docentes, semestres_contestados=semestres_contestados)
 
+# Ruta para docentes: muestra reporte de evaluaciones
 @app.route("/profesor")
 def profesor():
     if session.get('tipo_usuario') != 'docente':
@@ -82,6 +87,7 @@ def profesor():
                     resultados.append(row)
     return render_template("profesor.html", resultados=resultados)
 
+# Ruta para obtener semestres disponibles para evaluar a un docente
 @app.route("/semestres/<int:id_docente>")
 def semestres_por_docente(id_docente):
     id_alumno = session.get('id_alumno')
@@ -98,6 +104,7 @@ def semestres_por_docente(id_docente):
         return jsonify(semestres_filtrados)
     return {'semestres': semestres_filtrados}
 
+# Ruta para mostrar la encuesta de evaluación
 @app.route("/encuesta", methods=["POST"])
 def encuesta():
     id_docente = request.form.get("id_docente")
@@ -121,6 +128,7 @@ def encuesta():
     ]
     return render_template("encuesta.html", id_eval=id_eval, preguntas=preguntas)
 
+# Ruta para guardar respuestas y comentarios de la encuesta
 @app.route("/guardar", methods=["POST"])
 def guardar():
     id_eval = request.form.get("id_eval")
@@ -137,10 +145,12 @@ def guardar():
         db.commit()
     return render_template("resultado.html")
 
+# Ruta para cerrar sesión
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for('login'))
 
+# Ejecución de la app Flask en modo debug
 if __name__ == "__main__":
     app.run(debug=True)
