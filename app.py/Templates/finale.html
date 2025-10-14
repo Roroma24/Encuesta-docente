@@ -1,0 +1,25 @@
+<!--
+Autores: Axel Castañeda Sánchez y Luis Roberto Rodríguez Marroquin
+Descripción: Plantilla para la página final de la encuesta docente en
+caso de que el usuario ya haya completado todas las encuestas correspondientes.
+-->
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Encuesta Docente - Final</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    </head>
+
+    <body>
+        <div style="text-align:center; margin-top:50px;">
+            <h1>¡Gracias por completar todas las encuestas!</h1>
+            <p>Has terminado todas las evaluaciones asignadas.</p>
+            <form action="{{ url_for('logout') }}" method="GET" style="display:inline;">
+                <button type="submit" style="background-color:#eb2525; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">
+                    Cerrar sesión
+                </button>
+            </form>
+        </div>
+    </body>
+</html>        
