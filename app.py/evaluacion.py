@@ -57,10 +57,11 @@ def index():
     if session.get('tipo_usuario') != 'alumno':
         return redirect(url_for('login'))
     id_alumno = session.get('id_alumno')
-    # Obtener el campus del alumno
-    cursor.execute("SELECT id_campus FROM alumnos WHERE id_alumno = %s", (id_alumno,))
+    # Obtener el campus y semestre del alumno
+    cursor.execute("SELECT id_campus, numero_semestre FROM alumnos WHERE id_alumno = %s", (id_alumno,))
     alumno = cursor.fetchone()
     id_campus = alumno['id_campus'] if alumno else None
+    numero_semestre = alumno['numero_semestre'] if alumno else None
     # Filtrar docentes solo del mismo campus
     cursor.execute("SELECT * FROM docentes WHERE id_campus = %s", (id_campus,))
     docentes = cursor.fetchall()
@@ -94,14 +95,15 @@ def profesor():
 @app.route("/semestres/<int:id_docente>")
 def semestres_por_docente(id_docente):
     id_alumno = session.get('id_alumno')
-    # Obtener el campus del alumno
-    cursor.execute("SELECT id_campus FROM alumnos WHERE id_alumno = %s", (id_alumno,))
+    # Obtener el campus y semestre del alumno
+    cursor.execute("SELECT id_campus, numero_semestre FROM alumnos WHERE id_alumno = %s", (id_alumno,))
     alumno = cursor.fetchone()
     id_campus = alumno['id_campus'] if alumno else None
-    # Obtener solo los semestres del docente que sean del mismo campus
+    numero_semestre = alumno['numero_semestre'] if alumno else None
+    # Obtener solo los semestres del docente que sean del mismo campus y mismo semestre
     cursor.execute("""
-        SELECT * FROM semestre WHERE id_docente = %s AND id_campus = %s
-    """, (id_docente, id_campus))
+        SELECT * FROM semestre WHERE id_docente = %s AND id_campus = %s AND numero = %s
+    """, (id_docente, id_campus, numero_semestre))
     semestres = cursor.fetchall()
     # Obtener semestres ya contestados por el alumno
     cursor.execute("""
@@ -120,13 +122,14 @@ def encuesta():
     id_docente = request.form.get("id_docente")
     id_semestre = request.form.get("id_semestre")
     id_alumno = session.get('id_alumno')
-    # Validar que el semestre corresponde al docente y ambos son del mismo campus que el alumno
-    cursor.execute("SELECT id_campus FROM alumnos WHERE id_alumno = %s", (id_alumno,))
+    # Validar que el semestre corresponde al docente, ambos son del mismo campus y mismo semestre que el alumno
+    cursor.execute("SELECT id_campus, numero_semestre FROM alumnos WHERE id_alumno = %s", (id_alumno,))
     alumno = cursor.fetchone()
     id_campus = alumno['id_campus'] if alumno else None
+    numero_semestre = alumno['numero_semestre'] if alumno else None
     cursor.execute("""
-        SELECT * FROM semestre WHERE id_semestre = %s AND id_docente = %s AND id_campus = %s
-    """, (id_semestre, id_docente, id_campus))
+        SELECT * FROM semestre WHERE id_semestre = %s AND id_docente = %s AND id_campus = %s AND numero = %s
+    """, (id_semestre, id_docente, id_campus, numero_semestre))
     semestre = cursor.fetchone()
     if not semestre:
         return "No tienes permiso para evaluar este semestre.", 403

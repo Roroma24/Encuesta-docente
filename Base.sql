@@ -3,6 +3,9 @@ Autores: Axel Castañeda Sánchez y Luis Roberto Rodríguez Marroquin
 Descripción: Script SQL para crear la base de datos y las tablas necesarias para el sistema de evaluación docente.
 ***/
 
+-- Borrar la base de datos si existe
+DROP DATABASE IF EXISTS evaluacion_d;
+
 -- Crear la base de datos de evaluacion_d
 CREATE DATABASE IF NOT EXISTS evaluacion_d;
 
@@ -76,6 +79,7 @@ CREATE TABLE alumnos (
     correo VARCHAR(256) UNIQUE NOT NULL,
     id_campus INT NULL,
     id_carrera INT NULL,
+    numero_semestre ENUM('1','2','3','4','5','6','7','8','9') NULL,
     FOREIGN KEY (id_campus) REFERENCES campus(id_campus),
     FOREIGN KEY (id_carrera) REFERENCES carreras(id_carrera)
 );
@@ -158,7 +162,8 @@ CREATE PROCEDURE insertar_alumno_con_vinculos(
     IN p_apellidom VARCHAR(256),
     IN p_correo VARCHAR(256),
     IN p_id_campus INT,
-    IN p_id_carrera INT
+    IN p_id_carrera INT,
+    IN p_numero_semestre ENUM('1','2','3','4','5','6','7','8','9')
 )
 BEGIN
     IF p_id_campus IS NOT NULL AND p_id_carrera IS NOT NULL THEN
@@ -166,8 +171,8 @@ BEGIN
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'La carrera no está disponible en el campus seleccionado (proc insertar_alumno_con_vinculos).';
         END IF;
     END IF;
-    INSERT INTO alumnos (matricula, nombre, apellidop, apellidom, correo, id_campus, id_carrera)
-    VALUES (p_matricula, p_nombre, p_apellidop, p_apellidom, p_correo, p_id_campus, p_id_carrera);
+    INSERT INTO alumnos (matricula, nombre, apellidop, apellidom, correo, id_campus, id_carrera, numero_semestre)
+    VALUES (p_matricula, p_nombre, p_apellidop, p_apellidom, p_correo, p_id_campus, p_id_carrera, p_numero_semestre);
 END$$
 
 -- Procedimientos de consulta 
@@ -297,9 +302,9 @@ CALL insertar_semestre_con_vinculos(3, '7', 'Seguridad Informática', 'SI-701', 
 CALL insertar_semestre_con_vinculos(4, '8', 'Arquitectura de Software', 'AS-801', '2025-08-12', '2025-12-15', 1, 1);
 
 -- Insertar alumnos vinculados a campus y carrera 
-CALL insertar_alumno_con_vinculos('A1234567', 'Juan', 'Pérez', 'López', 'juan.perez@uvmnet.edu', 1, 1);
-CALL insertar_alumno_con_vinculos('A2345678', 'Mariana', 'Hernández', 'Gómez', 'mariana.hernandez@uvmnet.edu', 2, 4);
-CALL insertar_alumno_con_vinculos('A3456789', 'Roberto', 'Martínez', 'Soto', 'roberto.martinez@uvmnet.edu', 1, 3);
+CALL insertar_alumno_con_vinculos('A1234567', 'Juan', 'Pérez', 'López', 'juan.perez@uvmnet.edu', 1, 1, '5');
+CALL insertar_alumno_con_vinculos('A2345678', 'Mariana', 'Hernández', 'Gómez', 'mariana.hernandez@uvmnet.edu', 2, 4, '6');
+CALL insertar_alumno_con_vinculos('A3456789', 'Roberto', 'Martínez', 'Soto', 'roberto.martinez@uvmnet.edu', 1, 3, '8');
 
 CALL ver_docentes();
 CALL ver_semestres();
