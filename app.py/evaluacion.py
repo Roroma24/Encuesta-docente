@@ -15,7 +15,7 @@ db = mysql.connector.connect(
     host="localhost",
     user="root",
     password="Ror@$2405",
-    database="evaluacion_d"
+    database="evaluacion_d"  
 )
 cursor = db.cursor(dictionary=True)
 
@@ -56,21 +56,19 @@ def login():
 def index():
     if session.get('tipo_usuario') != 'alumno':
         return redirect(url_for('login'))
-    cursor.callproc("ver_docentes")
-    docentes = []
-    for result in cursor.stored_results():
-        docentes = result.fetchall()
     id_alumno = session.get('id_alumno')
-    cursor.callproc("ver_evaluaciones")
-    semestres_contestados = set()
-    for result in cursor.stored_results():
-        for row in result.fetchall():
-            if row['id_alumno'] == id_alumno:
-                cursor2 = db.cursor(dictionary=True)
-                cursor2.execute("SELECT id_semestre FROM evaluacion e JOIN respuestas r ON e.id_evaluacion = r.id_evaluacion WHERE e.id_evaluacion = %s GROUP BY e.id_semestre", (row['id_evaluacion'],))
-                for r in cursor2.fetchall():
-                    semestres_contestados.add(r['id_semestre'])
-                cursor2.close()
+    # Obtener el campus del alumno
+    cursor.execute("SELECT id_campus FROM alumnos WHERE id_alumno = %s", (id_alumno,))
+    alumno = cursor.fetchone()
+    id_campus = alumno['id_campus'] if alumno else None
+    # Filtrar docentes solo del mismo campus
+    cursor.execute("SELECT * FROM docentes WHERE id_campus = %s", (id_campus,))
+    docentes = cursor.fetchall()
+    # Obtener semestres ya contestados por el alumno
+    cursor.execute("""
+        SELECT id_semestre FROM evaluacion WHERE id_alumno = %s
+    """, (id_alumno,))
+    semestres_contestados = {row['id_semestre'] for row in cursor.fetchall()}
     return render_template("index.html", docentes=docentes, semestres_contestados=semestres_contestados)
 
 # Ruta para docentes: muestra reporte de evaluaciones
@@ -96,14 +94,21 @@ def profesor():
 @app.route("/semestres/<int:id_docente>")
 def semestres_por_docente(id_docente):
     id_alumno = session.get('id_alumno')
-    cursor.callproc("ver_semestres_por_docente", (id_docente,))
-    semestres = []
-    for result in cursor.stored_results():
-        semestres = result.fetchall()
-    cursor.callproc("ver_semestres_contestados", (id_docente, id_alumno))
-    semestres_contestados = set()
-    for result in cursor.stored_results():
-        semestres_contestados = {row['id_semestre'] for row in result.fetchall()}
+    # Obtener el campus del alumno
+    cursor.execute("SELECT id_campus FROM alumnos WHERE id_alumno = %s", (id_alumno,))
+    alumno = cursor.fetchone()
+    id_campus = alumno['id_campus'] if alumno else None
+    # Obtener solo los semestres del docente que sean del mismo campus
+    cursor.execute("""
+        SELECT * FROM semestre WHERE id_docente = %s AND id_campus = %s
+    """, (id_docente, id_campus))
+    semestres = cursor.fetchall()
+    # Obtener semestres ya contestados por el alumno
+    cursor.execute("""
+        SELECT id_semestre FROM evaluacion WHERE id_alumno = %s AND id_docente = %s
+    """, (id_alumno, id_docente))
+    semestres_contestados = {row['id_semestre'] for row in cursor.fetchall()}
+    # Filtrar semestres no contestados
     semestres_filtrados = [s for s in semestres if s['id_semestre'] not in semestres_contestados]
     if request.accept_mimetypes['application/json']:
         return jsonify(semestres_filtrados)
@@ -115,6 +120,16 @@ def encuesta():
     id_docente = request.form.get("id_docente")
     id_semestre = request.form.get("id_semestre")
     id_alumno = session.get('id_alumno')
+    # Validar que el semestre corresponde al docente y ambos son del mismo campus que el alumno
+    cursor.execute("SELECT id_campus FROM alumnos WHERE id_alumno = %s", (id_alumno,))
+    alumno = cursor.fetchone()
+    id_campus = alumno['id_campus'] if alumno else None
+    cursor.execute("""
+        SELECT * FROM semestre WHERE id_semestre = %s AND id_docente = %s AND id_campus = %s
+    """, (id_semestre, id_docente, id_campus))
+    semestre = cursor.fetchone()
+    if not semestre:
+        return "No tienes permiso para evaluar este semestre.", 403
     cursor.callproc("registrar_evaluacion", (id_docente, id_semestre, id_alumno))
     db.commit()
     cursor.execute("SELECT LAST_INSERT_ID() AS id_eval")

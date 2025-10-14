@@ -9,6 +9,22 @@ CREATE DATABASE IF NOT EXISTS evaluacion_d;
 -- Usar esquema predeterminado
 USE evaluacion_d;
 
+-- Tabla de campus
+CREATE TABLE campus (
+    id_campus INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(256) NOT NULL UNIQUE,
+    direccion VARCHAR(512),
+    telefono VARCHAR(50)
+);
+
+-- Tabla de carreras
+CREATE TABLE carreras (
+    id_carrera INT AUTO_INCREMENT PRIMARY KEY,
+    clave VARCHAR(50) UNIQUE,
+    nombre VARCHAR(256) NOT NULL,
+    duracion_semestres INT
+);
+
 -- Tabla de docentes
 CREATE TABLE docentes (
     id_docente INT AUTO_INCREMENT PRIMARY KEY,
@@ -17,7 +33,21 @@ CREATE TABLE docentes (
     apellidop VARCHAR(256) NOT NULL,
     apellidom VARCHAR(256) NOT NULL,
     correo VARCHAR(256) UNIQUE,
-    departamento VARCHAR(256) NOT NULL
+    departamento VARCHAR(256) NOT NULL,
+    id_campus INT NOT NULL,
+    FOREIGN KEY (id_campus) REFERENCES campus(id_campus)
+);
+
+-- Tabla de vinculación campus con carrera
+CREATE TABLE campus_carrera (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    campus_id INT NOT NULL,
+    carrera_id INT NOT NULL,
+    fecha_inicio DATE,
+    fecha_fin DATE,
+    UNIQUE KEY uq_campus_carrera (campus_id, carrera_id),
+    FOREIGN KEY (campus_id) REFERENCES campus(id_campus),
+    FOREIGN KEY (carrera_id) REFERENCES carreras(id_carrera)
 );
 
 -- Tabla de semestres
@@ -29,7 +59,11 @@ CREATE TABLE semestre (
     curso VARCHAR(256),
     fecha_i DATE,
     fecha_fin DATE,
-    FOREIGN KEY (id_docente) REFERENCES docentes(id_docente)
+    id_campus INT NULL,
+    id_carrera INT NULL,
+    FOREIGN KEY (id_docente) REFERENCES docentes(id_docente),
+    FOREIGN KEY (id_campus) REFERENCES campus(id_campus),
+    FOREIGN KEY (id_carrera) REFERENCES carreras(id_carrera)
 );
 
 -- Tabla de alumnos
@@ -39,7 +73,11 @@ CREATE TABLE alumnos (
     nombre VARCHAR(256) NOT NULL,
     apellidop VARCHAR(256) NOT NULL,
     apellidom VARCHAR(256) NOT NULL,
-    correo VARCHAR(256) UNIQUE NOT NULL
+    correo VARCHAR(256) UNIQUE NOT NULL,
+    id_campus INT NULL,
+    id_carrera INT NULL,
+    FOREIGN KEY (id_campus) REFERENCES campus(id_campus),
+    FOREIGN KEY (id_carrera) REFERENCES carreras(id_carrera)
 );
 
 -- Tabla de evaluaciones
@@ -72,87 +110,98 @@ CREATE TABLE comentarios (
     FOREIGN KEY (id_evaluacion) REFERENCES evaluacion(id_evaluacion)
 );
 
--- Procedimientos almacenados
+-- PROCEDIMIENTOS ALMACENADOS
+
 DELIMITER $$
 
--- Procedimiento para insertar docentes
-CREATE PROCEDURE insertar_docente(
+-- Procedimiento para insertar docente con campus 
+CREATE PROCEDURE insertar_docente_con_campus(
     IN p_matricula VARCHAR(10),
     IN p_nombre VARCHAR(256),
     IN p_apellidop VARCHAR(256),
     IN p_apellidom VARCHAR(256),
     IN p_correo VARCHAR(256),
-    IN p_departamento VARCHAR(256)
+    IN p_departamento VARCHAR(256),
+    IN p_id_campus INT
 )
 BEGIN
-    INSERT INTO docentes (matricula, nombre, apellidop, apellidom, correo, departamento)
-    VALUES (p_matricula, p_nombre, p_apellidop, p_apellidom, p_correo, p_departamento);
+    INSERT INTO docentes (matricula, nombre, apellidop, apellidom, correo, departamento, id_campus)
+    VALUES (p_matricula, p_nombre, p_apellidop, p_apellidom, p_correo, p_departamento, p_id_campus);
 END$$
 
--- Procedimiento para insertar semestres
-CREATE PROCEDURE insertar_semestre(
+-- Procedimiento para insertar semestre con campus y carrera 
+CREATE PROCEDURE insertar_semestre_con_vinculos(
     IN p_id_docente INT,
     IN p_numero ENUM('1','2','3','4','5','6','7','8','9'),
     IN p_materia VARCHAR(256),
     IN p_curso VARCHAR(256),
     IN p_fecha_i DATE,
-    IN p_fecha_fin DATE
+    IN p_fecha_fin DATE,
+    IN p_id_campus INT,
+    IN p_id_carrera INT
 )
 BEGIN
-    INSERT INTO semestre (id_docente, numero, materia, curso, fecha_i, fecha_fin)
-    VALUES (p_id_docente, p_numero, p_materia, p_curso, p_fecha_i, p_fecha_fin);
+    IF p_id_campus IS NOT NULL AND p_id_carrera IS NOT NULL THEN
+        IF NOT EXISTS (SELECT 1 FROM campus_carrera cc WHERE cc.campus_id = p_id_campus AND cc.carrera_id = p_id_carrera) THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'La carrera no está disponible en el campus seleccionado (proc insertar_semestre_con_vinculos).';
+        END IF;
+    END IF;
+    INSERT INTO semestre (id_docente, numero, materia, curso, fecha_i, fecha_fin, id_campus, id_carrera)
+    VALUES (p_id_docente, p_numero, p_materia, p_curso, p_fecha_i, p_fecha_fin, p_id_campus, p_id_carrera);
 END$$
 
--- Procedimiento para insertar alumnos
-CREATE PROCEDURE insertar_alumno(
+-- Procedimiento para insertar alumno con campus y carrera 
+CREATE PROCEDURE insertar_alumno_con_vinculos(
     IN p_matricula VARCHAR(10),
     IN p_nombre VARCHAR(256),
     IN p_apellidop VARCHAR(256),
     IN p_apellidom VARCHAR(256),
-    IN p_correo VARCHAR(256)
+    IN p_correo VARCHAR(256),
+    IN p_id_campus INT,
+    IN p_id_carrera INT
 )
 BEGIN
-    INSERT INTO alumnos (matricula, nombre, apellidop, apellidom, correo)
-    VALUES (p_matricula, p_nombre, p_apellidop, p_apellidom, p_correo);
+    IF p_id_campus IS NOT NULL AND p_id_carrera IS NOT NULL THEN
+        IF NOT EXISTS (SELECT 1 FROM campus_carrera cc WHERE cc.campus_id = p_id_campus AND cc.carrera_id = p_id_carrera) THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'La carrera no está disponible en el campus seleccionado (proc insertar_alumno_con_vinculos).';
+        END IF;
+    END IF;
+    INSERT INTO alumnos (matricula, nombre, apellidop, apellidom, correo, id_campus, id_carrera)
+    VALUES (p_matricula, p_nombre, p_apellidop, p_apellidom, p_correo, p_id_campus, p_id_carrera);
 END$$
 
--- Procedimiento para ver docentes
+-- Procedimientos de consulta 
 CREATE PROCEDURE ver_docentes()
 BEGIN
     SELECT * FROM docentes;
 END$$
 
--- Procedimiento para ver semestres
 CREATE PROCEDURE ver_semestres()
 BEGIN
     SELECT * FROM semestre;
 END$$
 
--- Procedimiento para ver alumnos
 CREATE PROCEDURE ver_alumnos()
 BEGIN
     SELECT * FROM alumnos;
 END$$
 
--- Procedimiento para ver evaluaciones
 CREATE PROCEDURE ver_evaluaciones()
 BEGIN
     SELECT * FROM evaluacion;
 END$$
 
--- Procedimiento para ver comentarios
 CREATE PROCEDURE ver_comentarios()
 BEGIN
     SELECT * FROM comentarios;
 END$$
 
--- Procedimiento para ver respuestas
 CREATE PROCEDURE ver_respuestas()
 BEGIN
     SELECT * FROM respuestas;
 END$$
 
--- Procedimiento para generar reporte de evaluaciones
+-- Procedimiento para generar reporte de evaluaciones 
 CREATE PROCEDURE reporte_evaluacion()
 BEGIN
     SELECT 
@@ -181,11 +230,7 @@ BEGIN
     GROUP BY d.id_docente, s.id_semestre;
 END$$
 
-DELIMITER ;
-
-DELIMITER $$
-
--- Procedimiento para registrar evaluaciones
+-- Procedimiento para registrar evaluacione
 CREATE PROCEDURE registrar_evaluacion(
     IN p_id_docente INT,
     IN p_id_semestre INT,
@@ -217,62 +262,48 @@ BEGIN
     VALUES (p_id_evaluacion, p_comentario);
 END$$
 
--- Procedimiento para ver semestres por docente
-CREATE PROCEDURE ver_semestres_por_docente(
-    IN p_id_docente INT
-)
-BEGIN
-    SELECT * FROM semestre WHERE id_docente = p_id_docente;
-END$$
+-- Insertar campus
+INSERT INTO campus (nombre, direccion, telefono) VALUES
+('Campus Centro', 'Av. Principal 123', '55-1234-5678'),
+('Campus Norte', 'Calle Norte 45', '55-9876-5432'),
+('Campus Sur', 'Boulevard Sur 9', '55-1111-2222');
 
--- Procedimiento para ver semestres contestados por alumno
-CREATE PROCEDURE ver_semestres_contestados(
-    IN p_id_docente INT,
-    IN p_id_alumno INT
-)
-BEGIN
-    SELECT e.id_semestre
-    FROM evaluacion e
-    JOIN respuestas r ON e.id_evaluacion = r.id_evaluacion
-    WHERE e.id_docente = p_id_docente AND e.id_alumno = p_id_alumno
-    GROUP BY e.id_semestre;
-END$$
+-- Insertar carreras
+INSERT INTO carreras (clave, nombre, duracion_semestres) VALUES
+('ING-SIST', 'Ingeniería en Sistemas', 9),
+('ING-IND', 'Ingeniería Industrial', 9),
+('LIC-ADM', 'Licenciatura en Administración', 8),
+('LIC-PSI', 'Licenciatura en Psicología', 8);
 
-DELIMITER ;
+-- Vincular carreras a campus 
+INSERT INTO campus_carrera (campus_id, carrera_id, fecha_inicio) VALUES
+(1, 1, '2020-01-01'), -- Campus Centro: Ingeniería en Sistemas
+(1, 3, '2019-08-01'), -- Campus Centro: Administración
+(2, 2, '2021-01-01'), -- Campus Norte: Ingeniería Industrial
+(2, 4, '2022-01-01'), -- Campus Norte: Psicología
+(3, 1, '2023-01-01'); -- Campus Sur: Ingeniería en Sistemas
 
--- Insertar docentes
-CALL insertar_docente('D1234567', 'María', 'González', 'López', 'maria.gonzalez@uvm.mx', 'Ingeniería');
-CALL insertar_docente('D2345678', 'Carlos', 'Ramírez', 'Torres', 'carlos.ramirez@uvm.mx', 'Ciencias Básicas');
-CALL insertar_docente('D3456789', 'Ana', 'Martínez', 'Soto', 'ana.martinez@uvm.mx', 'Sistemas Computacionales');
-CALL insertar_docente('D4567890', 'Luis', 'Hernández', 'Pérez', 'luis.hernandez@uvm.mx', 'Matemáticas');
+-- Insertar docentes 
+INSERT INTO docentes (matricula, nombre, apellidop, apellidom, correo, departamento, id_campus) VALUES
+('D1234567', 'María', 'González', 'López', 'maria.gonzalez@uvm.mx', 'Ingeniería', 1),
+('D2345678', 'Carlos', 'Ramírez', 'Torres', 'carlos.ramirez@uvm.mx', 'Ciencias Básicas', 2),
+('D3456789', 'Ana', 'Martínez', 'Soto', 'ana.martinez@uvm.mx', 'Sistemas Computacionales', 1),
+('D4567890', 'Luis', 'Hernández', 'Pérez', 'luis.hernandez@uvm.mx', 'Matemáticas', 3);
 
 -- Insertar semestres 
-CALL insertar_semestre(1, '5', 'Bases de Datos', 'BD-501', '2025-08-12', '2025-12-15');
-CALL insertar_semestre(2, '6', 'Redes de Computadoras', 'RC-601', '2025-08-12', '2025-12-15');
-CALL insertar_semestre(3, '7', 'Seguridad Informática', 'SI-701', '2025-08-12', '2025-12-15');
-CALL insertar_semestre(4, '8', 'Arquitectura de Software', 'AS-801', '2025-08-12', '2025-12-15');
-CALL insertar_semestre(4, '1', 'Física', 'F-101', '2025-08-12', '2025-12-15');
-CALL insertar_semestre(4, '3', 'Cálculo Diferencial', 'CD-301', '2025-08-12', '2025-12-15');
+CALL insertar_semestre_con_vinculos(1, '5', 'Bases de Datos', 'BD-501', '2025-08-12', '2025-12-15', 1, 1);
+CALL insertar_semestre_con_vinculos(2, '6', 'Redes de Computadoras', 'RC-601', '2025-08-12', '2025-12-15', 2, 2);
+CALL insertar_semestre_con_vinculos(3, '7', 'Seguridad Informática', 'SI-701', '2025-08-12', '2025-12-15', 1, 1);
+CALL insertar_semestre_con_vinculos(4, '8', 'Arquitectura de Software', 'AS-801', '2025-08-12', '2025-12-15', 1, 1);
 
--- Insertar alumnos
-CALL insertar_alumno('A1234567', 'Juan', 'Pérez', 'López', 'juan.perez@uvmnet.edu');
-CALL insertar_alumno('A2345678', 'Mariana', 'Hernández', 'Gómez', 'mariana.hernandez@uvmnet.edu');
-CALL insertar_alumno('A3456789', 'Roberto', 'Martínez', 'Soto', 'roberto.martinez@uvmnet.edu');
+-- Insertar alumnos vinculados a campus y carrera 
+CALL insertar_alumno_con_vinculos('A1234567', 'Juan', 'Pérez', 'López', 'juan.perez@uvmnet.edu', 1, 1);
+CALL insertar_alumno_con_vinculos('A2345678', 'Mariana', 'Hernández', 'Gómez', 'mariana.hernandez@uvmnet.edu', 2, 4);
+CALL insertar_alumno_con_vinculos('A3456789', 'Roberto', 'Martínez', 'Soto', 'roberto.martinez@uvmnet.edu', 1, 3);
 
--- Consultar todos los docentes
 CALL ver_docentes();
-
--- Consultar todos los semestres
 CALL ver_semestres();
-
--- Consultar todos los alumnos
 CALL ver_alumnos();
-
--- Consultar todas las evaluaciones 
 CALL ver_evaluaciones();
-
--- Consultar todas las respuestas 
 CALL ver_respuestas();
-
--- Consultar todos los comentarios 
 CALL ver_comentarios();
