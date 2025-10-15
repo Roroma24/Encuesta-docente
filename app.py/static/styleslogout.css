@@ -1,0 +1,152 @@
+/***
+ Autores: Axel Castañeda Sánchez y Luis Roberto Rodríguez Marroquin
+ Descripción: Estilos para la encuesta docente.
+ ***/
+
+/* Estilos generales del body */
+body {
+    background: #f4f6fa;
+    color: #5a2d2d;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* Encabezado principal (h1) */
+h1 {
+    color: #eb2525;
+    text-align: center;
+    margin-top: 30px;
+}
+
+/* Contenedor del formulario */
+form {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(34,44,58,0.08);
+    max-width: 500px;
+    margin: 30px auto;
+    padding: 30px 40px;
+}
+
+/* Etiquetas y párrafos */
+label, p {
+    color: #222c3a;
+    font-weight: 500;
+}
+
+/* Campos de entrada de texto, selectores y textarea*/
+select, input[type="text"], textarea {
+    width: 100%;
+    padding: 8px;
+    margin-top: 6px;
+    margin-bottom: 16px;
+    border: 1px solid #bfc9d8;
+    border-radius: 5px;
+    background: #f4f6fa;
+    font-size: 1em;
+}
+
+/* Botones generales */
+button {
+    background: #eb2525;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 12px 24px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+button:hover {
+    background: #a61717;
+}
+
+/* Separadores (líneas <hr>)*/
+hr {
+    border: none;
+    border-top: 1px solid #bfc9d8;
+    margin: 20px 0;
+}
+
+/* Estilos para enlaces <a> */
+a {
+    color: #eb2525;
+    text-decoration: none;
+    font-weight: 500;
+    display: block;
+    margin: 0 auto;
+    text-align: center;
+    width: fit-content;
+}
+a:hover {
+    text-decoration: underline;
+}
+
+/* Fondo con imagen personalizada */
+body {
+    background-image: url('uvm.jpg');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-position: center center;
+}
+
+/* Personalización de sliders <input type="range"> */
+input[type="range"].red-range {
+    accent-color: #eb2525;
+    width: 250px;
+    height: 6px;
+    background: linear-gradient(90deg, #ffcccc 0%, #eb2525 100%);
+    border-radius: 5px;
+    outline: none;
+}
+/* Personalización de los "thumbs" del slider en distintos navegadores */
+input[type="range"].red-range::-webkit-slider-thumb {
+    background: #eb2525;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    box-shadow: 0 0 4px #eb2525;
+}
+input[type="range"].red-range::-moz-range-thumb {
+    background: #eb2525;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    box-shadow: 0 0 4px #eb2525;
+}
+input[type="range"].red-range::-ms-thumb {
+    background: #eb2525;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    box-shadow: 0 0 4px #eb2525;
+}
+
+/* Enlace con estilo de botón para "Cerrar sesión" */
+a.logout-link {
+    background: #eb2525;
+    color: #fff !important;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 32px;
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(235, 37, 37, 0.10);
+    transition: background 0.2s;
+    font-family: 'Roboto', Arial, sans-serif;
+    display: block;
+    margin: 24px auto 0 auto;
+    text-align: center;
+    text-decoration: none;
+    width: fit-content;
+}
+a.logout-link:hover {
+    background: #c41e1e;
+    text-decoration: none;
+}

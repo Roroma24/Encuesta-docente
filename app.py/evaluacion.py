@@ -14,7 +14,7 @@ app.secret_key = "supersecretkey"
 db = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="Ror@$2405",
+    password="Saltamontes71#",
     database="evaluacion_d"  
 )
 cursor = db.cursor(dictionary=True)
@@ -65,6 +65,19 @@ def index():
     # Filtrar docentes solo del mismo campus
     cursor.execute("SELECT * FROM docentes WHERE id_campus = %s", (id_campus,))
     docentes = cursor.fetchall()
+    # Obtener semestres ya contestados por el alumno
+    cursor.execute("""
+        SELECT id_semestre FROM evaluacion WHERE id_alumno = %s
+    """, (id_alumno,))
+    semestres_contestados = {row['id_semestre'] for row in cursor.fetchall()}
+    # Obtener todos los semestres que el alumno debe contestar (del mismo campus y semestre)
+    cursor.execute("""
+        SELECT id_semestre FROM semestre WHERE id_campus = %s AND numero = %s
+    """, (id_campus, numero_semestre))
+    semestres_requeridos = {row['id_semestre'] for row in cursor.fetchall()}
+    # Si ya contestó todos los semestres requeridos, mostrar página final
+    if semestres_requeridos and semestres_requeridos.issubset(semestres_contestados):
+        return render_template("finale.html")
     # Obtener semestres ya contestados por el alumno
     cursor.execute("""
         SELECT id_semestre FROM evaluacion WHERE id_alumno = %s
