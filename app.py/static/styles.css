@@ -36,7 +36,7 @@ label, p {
 }
 
 /* Campos de entrada de texto, selectores y textarea*/
-select, input[type="text"], textarea {
+select, input[type="text"], input[type="password"], textarea {
     width: 100%;
     padding: 8px;
     margin-top: 6px;
