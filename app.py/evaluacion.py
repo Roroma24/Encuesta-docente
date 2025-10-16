@@ -57,32 +57,44 @@ def index():
     if session.get('tipo_usuario') != 'alumno':
         return redirect(url_for('login'))
     id_alumno = session.get('id_alumno')
-    # Obtener el campus y semestre del alumno
+
+    # Obtener campus y número de semestre del alumno
     cursor.execute("SELECT id_campus, numero_semestre FROM alumnos WHERE id_alumno = %s", (id_alumno,))
     alumno = cursor.fetchone()
     id_campus = alumno['id_campus'] if alumno else None
     numero_semestre = alumno['numero_semestre'] if alumno else None
-    # Filtrar docentes solo del mismo campus
-    cursor.execute("SELECT * FROM docentes WHERE id_campus = %s", (id_campus,))
-    docentes = cursor.fetchall()
-    # Obtener semestres ya contestados por el alumno
-    cursor.execute("""
-        SELECT id_semestre FROM evaluacion WHERE id_alumno = %s
-    """, (id_alumno,))
-    semestres_contestados = {row['id_semestre'] for row in cursor.fetchall()}
-    # Obtener todos los semestres que el alumno debe contestar (del mismo campus y semestre)
-    cursor.execute("""
-        SELECT id_semestre FROM semestre WHERE id_campus = %s AND numero = %s
-    """, (id_campus, numero_semestre))
-    semestres_requeridos = {row['id_semestre'] for row in cursor.fetchall()}
-    # Si ya contestó todos los semestres requeridos, mostrar página final
-    if semestres_requeridos and semestres_requeridos.issubset(semestres_contestados):
+
+    # Si no hay información de campus o semestre -> no hay encuestas disponibles
+    if not id_campus or not numero_semestre:
         return render_template("finale.html")
-    # Obtener semestres ya contestados por el alumno
-    cursor.execute("""
-        SELECT id_semestre FROM evaluacion WHERE id_alumno = %s
-    """, (id_alumno,))
+
+    # Semestres ya contestados por el alumno
+    cursor.execute("SELECT id_semestre FROM evaluacion WHERE id_alumno = %s", (id_alumno,))
     semestres_contestados = {row['id_semestre'] for row in cursor.fetchall()}
+
+    # Obtener semestres disponibles para el alumno (mismo campus + mismo número de semestre) y que no hayan sido contestados
+    cursor.execute("""
+        SELECT s.* FROM semestre s
+        WHERE s.id_campus = %s AND s.numero = %s
+        AND s.id_semestre NOT IN (
+            SELECT id_semestre FROM evaluacion WHERE id_alumno = %s
+        )
+    """, (id_campus, numero_semestre, id_alumno))
+    semestres_disponibles = cursor.fetchall()
+
+    # Si no hay semestres disponibles -> no mostrar opciones (página final)
+    if not semestres_disponibles:
+        return render_template("finale.html")
+
+    # Determinar docente(s) que tienen al menos un semestre disponible
+    docente_ids = {s['id_docente'] for s in semestres_disponibles}
+    if docente_ids:
+        placeholders = ",".join(["%s"] * len(docente_ids))
+        cursor.execute(f"SELECT * FROM docentes WHERE id_docente IN ({placeholders})", tuple(docente_ids))
+        docentes = cursor.fetchall()
+    else:
+        docentes = []
+
     return render_template("index.html", docentes=docentes, semestres_contestados=semestres_contestados)
 
 # Ruta para docentes: muestra reporte de evaluaciones
