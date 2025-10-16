@@ -37,6 +37,7 @@ CREATE TABLE docentes (
     apellidom VARCHAR(256) NOT NULL,
     correo VARCHAR(256) UNIQUE,
     departamento VARCHAR(256) NOT NULL,
+    fecha_nacimiento DATE NULL,
     id_campus INT NOT NULL,
     FOREIGN KEY (id_campus) REFERENCES campus(id_campus)
 );
@@ -80,6 +81,7 @@ CREATE TABLE alumnos (
     id_campus INT NULL,
     id_carrera INT NULL,
     numero_semestre ENUM('1','2','3','4','5','6','7','8','9') NULL,
+    fecha_nacimiento DATE NULL,
     FOREIGN KEY (id_campus) REFERENCES campus(id_campus),
     FOREIGN KEY (id_carrera) REFERENCES carreras(id_carrera)
 );
@@ -126,11 +128,12 @@ CREATE PROCEDURE insertar_docente_con_campus(
     IN p_apellidom VARCHAR(256),
     IN p_correo VARCHAR(256),
     IN p_departamento VARCHAR(256),
+    IN p_fecha_nacimiento DATE,
     IN p_id_campus INT
 )
 BEGIN
-    INSERT INTO docentes (matricula, nombre, apellidop, apellidom, correo, departamento, id_campus)
-    VALUES (p_matricula, p_nombre, p_apellidop, p_apellidom, p_correo, p_departamento, p_id_campus);
+    INSERT INTO docentes (matricula, nombre, apellidop, apellidom, correo, departamento, fecha_nacimiento, id_campus)
+    VALUES (p_matricula, p_nombre, p_apellidop, p_apellidom, p_correo, p_departamento, p_fecha_nacimiento, p_id_campus);
 END$$
 
 -- Procedimiento para insertar semestre con campus y carrera 
@@ -163,7 +166,8 @@ CREATE PROCEDURE insertar_alumno_con_vinculos(
     IN p_correo VARCHAR(256),
     IN p_id_campus INT,
     IN p_id_carrera INT,
-    IN p_numero_semestre ENUM('1','2','3','4','5','6','7','8','9')
+    IN p_numero_semestre ENUM('1','2','3','4','5','6','7','8','9'),
+    IN p_fecha_nacimiento DATE
 )
 BEGIN
     IF p_id_campus IS NOT NULL AND p_id_carrera IS NOT NULL THEN
@@ -171,8 +175,8 @@ BEGIN
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'La carrera no está disponible en el campus seleccionado (proc insertar_alumno_con_vinculos).';
         END IF;
     END IF;
-    INSERT INTO alumnos (matricula, nombre, apellidop, apellidom, correo, id_campus, id_carrera, numero_semestre)
-    VALUES (p_matricula, p_nombre, p_apellidop, p_apellidom, p_correo, p_id_campus, p_id_carrera, p_numero_semestre);
+    INSERT INTO alumnos (matricula, nombre, apellidop, apellidom, correo, id_campus, id_carrera, numero_semestre, fecha_nacimiento)
+    VALUES (p_matricula, p_nombre, p_apellidop, p_apellidom, p_correo, p_id_campus, p_id_carrera, p_numero_semestre, p_fecha_nacimiento);
 END$$
 
 -- Procedimientos de consulta 
@@ -289,11 +293,11 @@ INSERT INTO campus_carrera (campus_id, carrera_id, fecha_inicio) VALUES
 (3, 1, '2023-01-01'); -- Campus Sur: Ingeniería en Sistemas
 
 -- Insertar docentes 
-INSERT INTO docentes (matricula, nombre, apellidop, apellidom, correo, departamento, id_campus) VALUES
-('D1234567', 'María', 'González', 'López', 'maria.gonzalez@uvm.mx', 'Ingeniería', 1),
-('D2345678', 'Carlos', 'Ramírez', 'Torres', 'carlos.ramirez@uvm.mx', 'Ciencias Básicas', 2),
-('D3456789', 'Ana', 'Martínez', 'Soto', 'ana.martinez@uvm.mx', 'Sistemas Computacionales', 1),
-('D4567890', 'Luis', 'Hernández', 'Pérez', 'luis.hernandez@uvm.mx', 'Matemáticas', 3);
+INSERT INTO docentes (matricula, nombre, apellidop, apellidom, correo, departamento, fecha_nacimiento, id_campus) VALUES
+('D1234567', 'María', 'González', 'López', 'maria.gonzalez@uvm.mx', 'Ingeniería', '1980-03-15', 1),
+('D2345678', 'Carlos', 'Ramírez', 'Torres', 'carlos.ramirez@uvm.mx', 'Ciencias Básicas', '1978-07-22', 2),
+('D3456789', 'Ana', 'Martínez', 'Soto', 'ana.martinez@uvm.mx', 'Sistemas Computacionales', '1985-01-30', 1),
+('D4567890', 'Luis', 'Hernández', 'Pérez', 'luis.hernandez@uvm.mx', 'Matemáticas', '1975-11-11', 3);
 
 -- Insertar semestres 
 CALL insertar_semestre_con_vinculos(1, '5', 'Bases de Datos', 'BD-501', '2025-08-12', '2025-12-15', 1, 1);
@@ -302,9 +306,9 @@ CALL insertar_semestre_con_vinculos(3, '7', 'Seguridad Informática', 'SI-701', 
 CALL insertar_semestre_con_vinculos(4, '8', 'Arquitectura de Software', 'AS-801', '2025-08-12', '2025-12-15', 1, 1);
 
 -- Insertar alumnos vinculados a campus y carrera 
-CALL insertar_alumno_con_vinculos('A1234567', 'Juan', 'Pérez', 'López', 'juan.perez@uvmnet.edu', 1, 1, '5');
-CALL insertar_alumno_con_vinculos('A2345678', 'Mariana', 'Hernández', 'Gómez', 'mariana.hernandez@uvmnet.edu', 2, 4, '6');
-CALL insertar_alumno_con_vinculos('A3456789', 'Roberto', 'Martínez', 'Soto', 'roberto.martinez@uvmnet.edu', 1, 3, '8');
+CALL insertar_alumno_con_vinculos('A1234567', 'Juan', 'Pérez', 'López', 'juan.perez@uvmnet.edu', 1, 1, '5', '2002-04-09');
+CALL insertar_alumno_con_vinculos('A2345678', 'Mariana', 'Hernández', 'Gómez', 'mariana.hernandez@uvmnet.edu', 2, 4, '6', '2001-11-03');
+CALL insertar_alumno_con_vinculos('A3456789', 'Roberto', 'Martínez', 'Soto', 'roberto.martinez@uvmnet.edu', 1, 3, '8', '2000-02-20');
 
 CALL ver_docentes();
 CALL ver_semestres();
