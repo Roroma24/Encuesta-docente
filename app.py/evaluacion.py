@@ -24,6 +24,7 @@ cursor = db.cursor(dictionary=True)
 def login():
     if request.method == "POST":
         matricula = request.form.get("matricula", "").strip()
+        password = request.form.get("password", "").strip()
         cursor.callproc("ver_alumnos")
         alumno = None
         for result in cursor.stored_results():
@@ -32,10 +33,22 @@ def login():
                     alumno = row
                     break
         if alumno:
-            session['tipo_usuario'] = 'alumno'
-            session['matricula'] = matricula
-            session['id_alumno'] = alumno['id_alumno']
-            return redirect(url_for('index'))
+            # Validar contraseña: fecha de nacimiento en formato DDMMYY (ej. 09/04/02 -> 090402)
+            fecha_nac = alumno.get('fecha_nacimiento')
+            if fecha_nac:
+                try:
+                    expected = fecha_nac.strftime("%d%m%y")
+                except Exception:
+                    expected = ""
+            else:
+                expected = ""
+            if password == expected and expected != "":
+                session['tipo_usuario'] = 'alumno'
+                session['matricula'] = matricula
+                session['id_alumno'] = alumno['id_alumno']
+                return redirect(url_for('index'))
+            else:
+                return render_template("login.html", error="Matrícula o contraseña incorrecta")
         cursor.callproc("ver_docentes")
         docente = None
         for result in cursor.stored_results():
@@ -44,10 +57,22 @@ def login():
                     docente = row
                     break
         if docente:
-            session['tipo_usuario'] = 'docente'
-            session['matricula'] = matricula
-            session['id_docente'] = docente['id_docente']
-            return redirect(url_for('profesor'))
+            # Validar contraseña del docente con su fecha de nacimiento en formato DDMMYY
+            fecha_nac_doc = docente.get('fecha_nacimiento')
+            if fecha_nac_doc:
+                try:
+                    expected_doc = fecha_nac_doc.strftime("%d%m%y")
+                except Exception:
+                    expected_doc = ""
+            else:
+                expected_doc = ""
+            if password == expected_doc and expected_doc != "":
+                session['tipo_usuario'] = 'docente'
+                session['matricula'] = matricula
+                session['id_docente'] = docente['id_docente']
+                return redirect(url_for('profesor'))
+            else:
+                return render_template("login.html", error="Matrícula o contraseña incorrecta")
         return render_template("login.html", error="Matrícula no encontrada")
     return render_template("login.html")
 
