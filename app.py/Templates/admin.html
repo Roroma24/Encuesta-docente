@@ -1,0 +1,227 @@
+<!--
+Autores: Axel Castañeda Sánchez y Luis Roberto Rodríguez Marroquin
+Descripción: Plantilla para el panel administrativo.
+-->
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Panel Administrativo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        .admin-container {
+            max-width: 95%;
+            margin: 20px auto;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-title {
+            color: #eb2525;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .stat-content {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .stat-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .stat-table th,
+        .stat-table td {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            color: #eb2525;
+            font-weight: bold;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .evaluation-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .evaluation-table th {
+            background: #eb2525;
+            color: white;
+            padding: 10px;
+        }
+
+        .evaluation-table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .status-asignacion {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+
+        .status-valoracion {
+            color: #f1c40f;
+            font-weight: bold;
+        }
+
+        .status-sin-asignacion {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .promedio-cell {
+            font-weight: bold;
+        }
+
+        .promedio-alto {
+            color: #2ecc71;
+        }
+
+        .promedio-medio {
+            color: #f1c40f;
+        }
+
+        .promedio-bajo {
+            color: #e74c3c;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="admin-container">
+        <h1>Panel Administrativo</h1>
+
+        <!-- Estadísticas Generales en Grid -->
+        <div class="stats-grid">
+            <!-- Campus Evaluando -->
+            <div class="stat-card">
+                <div class="stat-title">Campus Evaluando</div>
+                <div class="stat-number">{{ stats.total_campus }}</div>
+            </div>
+
+            <!-- Total Alumnos Evaluando -->
+            <div class="stat-card">
+                <div class="stat-title">Total Alumnos Evaluando</div>
+                <div class="stat-number">{{ stats.total_alumnos }}</div>
+            </div>
+
+            <!-- Evaluaciones por Campus -->
+            <div class="stat-card">
+                <div class="stat-title">Evaluaciones por Campus</div>
+                <div class="stat-content">
+                    <table class="stat-table">
+                        <tr>
+                            <th>Campus</th>
+                            <th>Alumnos</th>
+                        </tr>
+                        {% for campus in stats.por_campus %}
+                        <tr>
+                            <td>{{ campus.campus }}</td>
+                            <td>{{ campus.alumnos }}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+
+            <!-- Evaluaciones por Carrera -->
+            <div class="stat-card">
+                <div class="stat-title">Evaluaciones por Carrera</div>
+                <div class="stat-content">
+                    <table class="stat-table">
+                        <tr>
+                            <th>Carrera</th>
+                            <th>Alumnos</th>
+                        </tr>
+                        {% for carrera in stats.por_carrera %}
+                        <tr>
+                            <td>{{ carrera.carrera }}</td>
+                            <td>{{ carrera.alumnos }}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+
+            <!-- Alumnos Pendientes -->
+            <div class="stat-card">
+                <div class="stat-title">Alumnos Pendientes de Evaluar</div>
+                <div class="stat-content">
+                    <table class="stat-table">
+                        <tr>
+                            <th>Matrícula</th>
+                            <th>Nombre</th>
+                            <th>Campus</th>
+                        </tr>
+                        {% for alumno in stats.sin_evaluar %}
+                        <tr>
+                            <td>{{ alumno.matricula }}</td>
+                            <td>{{ alumno.nombre }} {{ alumno.apellidop }}</td>
+                            <td>{{ alumno.campus }}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Evaluaciones de Docentes -->
+        <div class="stat-card">
+            <div class="stat-title">Evaluaciones de Docentes</div>
+            <div class="stat-content">
+                <table class="evaluation-table">
+                    <tr>
+                        <th>Docente</th>
+                        <th>Campus</th>
+                        <th>Materia</th>
+                        <th>Promedio</th>
+                        <th>Estado de Asignación</th>
+                    </tr>
+                    {% for eval in evaluaciones %}
+                    <tr>
+                        <td>{{ eval.nombre_docente }} {{ eval.apellidop }} {{ eval.apellidom }}</td>
+                        <td>{{ eval.campus_nombre }}</td>
+                        <td>{{ eval.materia }}</td>
+                        <td
+                            class="promedio-cell {% if eval.promedio >= 4.5 %}promedio-alto{% elif eval.promedio >= 3.0 %}promedio-medio{% else %}promedio-bajo{% endif %}">
+                            {{ eval.promedio }}
+                        </td>
+                        <td class="status-{{ eval.estatus_docente|lower|replace(' ', '-') }}">
+                            {{ eval.estatus_docente }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                <a href="{{ url_for('logout') }}" class="logout-link">Cerrar sesión</a>
+            </div>
+</body>
+
+</html>

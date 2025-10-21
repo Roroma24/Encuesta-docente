@@ -14,7 +14,7 @@ app.secret_key = "supersecretkey"
 db = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="Saltamontes71#",
+    password="Ror@$2405",
     database="evaluacion_d"  
 )
 cursor = db.cursor(dictionary=True)
@@ -25,6 +25,16 @@ def login():
     if request.method == "POST":
         matricula = request.form.get("matricula", "").strip()
         password = request.form.get("password", "").strip()
+        
+        # Verificar si es admin 
+        if matricula == "admin" and password == "admin1":
+            session['tipo_usuario'] = 'admin'
+            return redirect(url_for('admin'))
+            
+        # Para alumnos y docentes, validar formato de fecha
+        if not (len(password) == 6 and password.isdigit()):
+            return render_template("login.html", error="Formato de contraseña incorrecto para alumnos/docentes (debe ser DDMMYY)")
+        
         cursor.callproc("ver_alumnos")
         alumno = None
         for result in cursor.stored_results():
@@ -33,7 +43,7 @@ def login():
                     alumno = row
                     break
         if alumno:
-            # Validar contraseña: fecha de nacimiento en formato DDMMYY (ej. 09/04/02 -> 090402)
+            # Validar contraseña: fecha de nacimiento en formato DDMMYY 
             fecha_nac = alumno.get('fecha_nacimiento')
             if fecha_nac:
                 try:
@@ -97,7 +107,7 @@ def index():
     cursor.execute("SELECT id_semestre FROM evaluacion WHERE id_alumno = %s", (id_alumno,))
     semestres_contestados = {row['id_semestre'] for row in cursor.fetchall()}
 
-    # Obtener semestres disponibles para el alumno (mismo campus + mismo número de semestre) y que no hayan sido contestados
+    # Obtener semestres disponibles para el alumno y que no hayan sido contestados
     cursor.execute("""
         SELECT s.* FROM semestre s
         WHERE s.id_campus = %s AND s.numero = %s
@@ -223,6 +233,32 @@ def guardar():
 def logout():
     session.clear()
     return redirect(url_for('login'))
+
+# Ruta para admin: muestra reporte general y estadísticas
+@app.route("/admin")
+def admin():
+    if session.get('tipo_usuario') != 'admin':
+        return redirect(url_for('login'))
+    
+    # Obtener reporte de evaluaciones
+    cursor.callproc("reporte_admin_evaluacion")
+    evaluaciones = []
+    for result in cursor.stored_results():
+        evaluaciones = result.fetchall()
+    
+    # Obtener estadísticas
+    cursor.callproc("estadisticas_evaluacion")
+    stats = {}
+    results = list(cursor.stored_results())
+    
+    if len(results) >= 5:
+        stats['total_campus'] = results[0].fetchone()['total_campus']
+        stats['total_alumnos'] = results[1].fetchone()['total_alumnos']
+        stats['por_campus'] = results[2].fetchall()
+        stats['por_carrera'] = results[3].fetchall()
+        stats['sin_evaluar'] = results[4].fetchall()
+    
+    return render_template("admin.html", evaluaciones=evaluaciones, stats=stats)
 
 # Ejecución de la app Flask en modo debug
 if __name__ == "__main__":

@@ -49,9 +49,10 @@ Descripción: Plantilla para el inicio de sesión.
             <label for="matricula">Matrícula:</label><br>
             <input type="text" id="matricula" name="matricula" required maxlength="10" style="text-align:center;"><br><br>
             
-            <!-- Nuevo campo: contraseña = fecha de nacimiento en formato DDMMYY (ej. 090402) -->
-            <label for="password">Contraseña (DDMMYY):</label><br>
-            <input type="password" id="password" name="password" required maxlength="6" pattern="\d{6}" title="Formato: 6 dígitos DDMMYY" style="text-align:center;"><br><br>
+            <!-- Nuevo campo: contraseña -->
+            <label for="password">Contraseña:</label><br>
+            <input type="password" id="password" name="password" required maxlength="6" style="text-align:center;"
+       title="Para alumnos y docentes: 6 dígitos en formato DDMMYY"><br><br>
             
             <!-- Botón de envío -->
             <button type="submit">Ingresar</button>
