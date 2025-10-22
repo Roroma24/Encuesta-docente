@@ -325,13 +325,48 @@ BEGIN
     JOIN carreras ca ON a.id_carrera = ca.id_carrera
     GROUP BY a.id_carrera;
     
-    -- Alumnos que no han evaluado
+    -- Alumnos que no han evaluado (antiguo: sin evaluacion alguna)
     SELECT a.*, c.nombre as campus, ca.nombre as carrera
     FROM alumnos a
     LEFT JOIN evaluacion e ON a.id_alumno = e.id_alumno
     JOIN campus c ON a.id_campus = c.id_campus
     JOIN carreras ca ON a.id_carrera = ca.id_carrera
     WHERE e.id_evaluacion IS NULL;
+
+    -- Nuevo: Estado por alumno: total requerido / completadas / pendientes
+    SELECT 
+        a.id_alumno,
+        a.matricula,
+        a.nombre,
+        a.apellidop,
+        c.nombre as campus,
+        ca.nombre as carrera,
+        COALESCE((
+            SELECT COUNT(*) FROM semestre s 
+            WHERE s.id_campus = a.id_campus AND s.numero = a.numero_semestre
+        ),0) AS total_requerido,
+        COALESCE((
+            SELECT COUNT(DISTINCT e.id_semestre) 
+            FROM evaluacion e 
+            JOIN semestre s2 ON e.id_semestre = s2.id_semestre
+            WHERE e.id_alumno = a.id_alumno 
+              AND s2.id_campus = a.id_campus 
+              AND s2.numero = a.numero_semestre
+        ),0) AS completadas,
+        (COALESCE((
+            SELECT COUNT(*) FROM semestre s 
+            WHERE s.id_campus = a.id_campus AND s.numero = a.numero_semestre
+        ),0) - COALESCE((
+            SELECT COUNT(DISTINCT e.id_semestre) 
+            FROM evaluacion e 
+            JOIN semestre s2 ON e.id_semestre = s2.id_semestre
+            WHERE e.id_alumno = a.id_alumno 
+              AND s2.id_campus = a.id_campus 
+              AND s2.numero = a.numero_semestre
+        ),0)) AS pendientes
+    FROM alumnos a
+    LEFT JOIN campus c ON a.id_campus = c.id_campus
+    LEFT JOIN carreras ca ON a.id_carrera = ca.id_carrera;
 END$$
 
 -- Insertar campus

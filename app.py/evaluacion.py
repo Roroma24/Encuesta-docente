@@ -14,7 +14,7 @@ app.secret_key = "supersecretkey"
 db = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="Ror@$2405",
+    password="Saltamontes71#",
     database="evaluacion_d"  
 )
 cursor = db.cursor(dictionary=True)
@@ -182,6 +182,7 @@ def encuesta():
     id_docente = request.form.get("id_docente")
     id_semestre = request.form.get("id_semestre")
     id_alumno = session.get('id_alumno')
+
     # Validar que el semestre corresponde al docente, ambos son del mismo campus y mismo semestre que el alumno
     cursor.execute("SELECT id_campus, numero_semestre FROM alumnos WHERE id_alumno = %s", (id_alumno,))
     alumno = cursor.fetchone()
@@ -193,10 +194,11 @@ def encuesta():
     semestre = cursor.fetchone()
     if not semestre:
         return "No tienes permiso para evaluar este semestre.", 403
-    cursor.callproc("registrar_evaluacion", (id_docente, id_semestre, id_alumno))
-    db.commit()
-    cursor.execute("SELECT LAST_INSERT_ID() AS id_eval")
-    id_eval = cursor.fetchone()['id_eval']
+
+    # Guardar temporalmente en sesión para que /guardar pueda crear la evaluación si el form no trae los hidden inputs
+    session['pending_eval'] = {'id_docente': id_docente, 'id_semestre': id_semestre}
+
+    # No crear la fila en evaluacion aquí — se hará al guardar las respuestas.
     preguntas = [
         "¿Qué tan claro y comprensible explica los temas durante la clase?",
         "¿En qué medida domina el contenido de la materia que imparte?",
@@ -209,23 +211,65 @@ def encuesta():
         "¿Qué tanto motiva a los estudiantes a interesarse en la materia?",
         "¿Qué tan accesible y disponible está fuera de clase para apoyar a los estudiantes?"
     ]
-    return render_template("encuesta.html", id_eval=id_eval, preguntas=preguntas)
+
+    # Enviar id_docente e id_semestre al template; el backend creará la evaluación cuando se guarden las respuestas.
+    return render_template("encuesta.html", id_docente=id_docente, id_semestre=id_semestre, preguntas=preguntas)
 
 # Ruta para guardar respuestas y comentarios de la encuesta
 @app.route("/guardar", methods=["POST"])
 def guardar():
+    # Si la plantilla envía id_eval (por compatibilidad), usarlo; si no, crear la evaluación ahora.
     id_eval = request.form.get("id_eval")
+    id_docente = request.form.get("id_docente")
+    id_semestre = request.form.get("id_semestre")
+    id_alumno = session.get('id_alumno')
+
+    # Recuperar datos desde session si no vienen en el POST (por plantillas que no envían hidden fields)
+    if (not id_docente or not id_semestre):
+        pending = session.get('pending_eval')
+        if pending:
+            id_docente = id_docente or pending.get('id_docente')
+            id_semestre = id_semestre or pending.get('id_semestre')
+
+    # Si tenemos id_eval, obtener los ids asociados (por seguridad)
+    if id_eval and id_eval.strip() != "":
+        try:
+            cursor.execute("SELECT id_docente, id_semestre FROM evaluacion WHERE id_evaluacion = %s", (id_eval,))
+            ev = cursor.fetchone()
+            if ev:
+                id_docente = id_docente or ev.get('id_docente')
+                id_semestre = id_semestre or ev.get('id_semestre')
+        except Exception:
+            pass
+
+    # Ahora validar que existan los datos necesarios para crear la evaluación si hace falta
+    if not id_eval or id_eval.strip() == "":
+        if not id_docente or not id_semestre or not id_alumno:
+            return "Datos insuficientes para registrar la evaluación.", 400
+        # Crear la evaluación ahora que el alumno envía respuestas
+        cursor.callproc("registrar_evaluacion", (int(id_docente), int(id_semestre), int(id_alumno)))
+        db.commit()
+        cursor.execute("SELECT LAST_INSERT_ID() AS id_eval")
+        id_eval = cursor.fetchone()['id_eval']
+
+    # Insertar respuestas
     for key in request.form:
         if key.startswith("pregunta_"):
             pregunta = request.form.get(key, "").strip()
             idx = key.split('_')[1]
             escala = request.form.get(f"escala_{idx}", "").strip()
-            cursor.callproc("insertar_respuesta", (id_eval, pregunta, escala))
+            cursor.callproc("insertar_respuesta", (int(id_eval), pregunta, escala))
     db.commit()
+
+    # Insertar comentario si existe
     comentario = request.form.get("comentario")
     if comentario and comentario.strip():
-        cursor.callproc("insertar_comentario", (id_eval, comentario.strip()))
+        cursor.callproc("insertar_comentario", (int(id_eval), comentario.strip()))
         db.commit()
+
+    # Limpiar pending_eval de la sesión
+    session.pop('pending_eval', None)
+
     return render_template("resultado.html")
 
 # Ruta para cerrar sesión
@@ -246,18 +290,27 @@ def admin():
     for result in cursor.stored_results():
         evaluaciones = result.fetchall()
     
-    # Obtener estadísticas
+    # Obtener estadísticas (ahora devolvemos 6 conjuntos: total_campus, total_alumnos, por_campus, por_carrera, sin_evaluar, alumnos_estado)
     cursor.callproc("estadisticas_evaluacion")
     stats = {}
     results = list(cursor.stored_results())
     
-    if len(results) >= 5:
+    if len(results) >= 6:
         stats['total_campus'] = results[0].fetchone()['total_campus']
         stats['total_alumnos'] = results[1].fetchone()['total_alumnos']
         stats['por_campus'] = results[2].fetchall()
         stats['por_carrera'] = results[3].fetchall()
-        stats['sin_evaluar'] = results[4].fetchall()
-    
+        stats['sin_evaluar'] = results[4].fetchall()            # para compatibilidad
+        stats['alumnos_estado'] = results[5].fetchall()         # nuevo: lista con total_requerido/completadas/pendientes por alumno
+    else:
+        # Mantener compatibilidad si el procedimiento no devolviera el nuevo conjunto
+        stats['total_campus'] = None
+        stats['total_alumnos'] = None
+        stats['por_campus'] = []
+        stats['por_carrera'] = []
+        stats['sin_evaluar'] = []
+        stats['alumnos_estado'] = []
+
     return render_template("admin.html", evaluaciones=evaluaciones, stats=stats)
 
 # Ejecución de la app Flask en modo debug

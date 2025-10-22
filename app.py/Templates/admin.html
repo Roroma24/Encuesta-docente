@@ -180,13 +180,23 @@ Descripción: Plantilla para el panel administrativo.
                             <th>Matrícula</th>
                             <th>Nombre</th>
                             <th>Campus</th>
+                            <th>Carrera</th>
+                            <th>Requeridas</th>
+                            <th>Completadas</th>
+                            <th>Pendientes</th>
                         </tr>
-                        {% for alumno in stats.sin_evaluar %}
+                        {% for alumno in stats.alumnos_estado %}
+                        {% if alumno.pendientes and alumno.pendientes|int > 0 %}
                         <tr>
                             <td>{{ alumno.matricula }}</td>
                             <td>{{ alumno.nombre }} {{ alumno.apellidop }}</td>
                             <td>{{ alumno.campus }}</td>
+                            <td>{{ alumno.carrera }}</td>
+                            <td>{{ alumno.total_requerido }}</td>
+                            <td>{{ alumno.completadas }}</td>
+                            <td>{{ alumno.pendientes }}</td>
                         </tr>
+                        {% endif %}
                         {% endfor %}
                     </table>
                 </div>
