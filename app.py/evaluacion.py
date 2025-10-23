@@ -14,7 +14,7 @@ app.secret_key = "supersecretkey"
 db = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="Saltamontes71#",
+    password="Ror@$2405",
     database="evaluacion_d"  
 )
 cursor = db.cursor(dictionary=True)
@@ -103,9 +103,31 @@ def index():
     if not id_campus or not numero_semestre:
         return render_template("finale.html")
 
-    # Semestres ya contestados por el alumno
-    cursor.execute("SELECT id_semestre FROM evaluacion WHERE id_alumno = %s", (id_alumno,))
-    semestres_contestados = {row['id_semestre'] for row in cursor.fetchall()}
+    # Verificar estado de evaluaciones docentes y de servicios
+    cursor.execute("""
+        SELECT 
+            (SELECT COUNT(*) FROM semestre s 
+             WHERE s.id_campus = %s AND s.numero = %s) as total_docentes,
+            (SELECT COUNT(*) FROM evaluacion e 
+             JOIN semestre s ON e.id_semestre = s.id_semestre 
+             WHERE e.id_alumno = %s AND s.id_campus = %s AND s.numero = %s) as completadas_docentes,
+            EXISTS(SELECT 1 FROM evaluacion_servicios WHERE id_alumno = %s) as servicios_completado
+    """, (id_campus, numero_semestre, id_alumno, id_campus, numero_semestre, id_alumno))
+    
+    estado = cursor.fetchone()
+    
+    # Si no hay más evaluaciones docentes pendientes y falta la de servicios,
+    # mostrar la página de selección dentro de index
+    if estado['total_docentes'] == estado['completadas_docentes'] and not estado['servicios_completado']:
+        # renderizar index con bandera para mostrar la selección de la encuesta de servicios
+        return render_template("index.html",
+                               docentes=[],
+                               servicios_completado=False,
+                               servicios_pendiente=True)
+    
+    # Si completó todo (docentes + servicios), mostrar página final
+    if estado['total_docentes'] == estado['completadas_docentes'] and estado['servicios_completado']:
+        return render_template("finale.html")
 
     # Obtener semestres disponibles para el alumno y que no hayan sido contestados
     cursor.execute("""
@@ -117,10 +139,6 @@ def index():
     """, (id_campus, numero_semestre, id_alumno))
     semestres_disponibles = cursor.fetchall()
 
-    # Si no hay semestres disponibles -> no mostrar opciones (página final)
-    if not semestres_disponibles:
-        return render_template("finale.html")
-
     # Determinar docente(s) que tienen al menos un semestre disponible
     docente_ids = {s['id_docente'] for s in semestres_disponibles}
     if docente_ids:
@@ -130,7 +148,11 @@ def index():
     else:
         docentes = []
 
-    return render_template("index.html", docentes=docentes, semestres_contestados=semestres_contestados)
+    # También pasar el estado de la evaluación de servicios al template (asegurarse bandera presente)
+    return render_template("index.html", 
+                         docentes=docentes, 
+                         servicios_completado=estado['servicios_completado'],
+                         servicios_pendiente=False)
 
 # Ruta para docentes: muestra reporte de evaluaciones
 @app.route("/profesor")
@@ -172,9 +194,8 @@ def semestres_por_docente(id_docente):
     semestres_contestados = {row['id_semestre'] for row in cursor.fetchall()}
     # Filtrar semestres no contestados
     semestres_filtrados = [s for s in semestres if s['id_semestre'] not in semestres_contestados]
-    if request.accept_mimetypes['application/json']:
-        return jsonify(semestres_filtrados)
-    return {'semestres': semestres_filtrados}
+    # Siempre devolver JSON para el fetch del frontend
+    return jsonify(semestres_filtrados)
 
 # Ruta para mostrar la encuesta de evaluación
 @app.route("/encuesta", methods=["POST"])
@@ -198,7 +219,6 @@ def encuesta():
     # Guardar temporalmente en sesión para que /guardar pueda crear la evaluación si el form no trae los hidden inputs
     session['pending_eval'] = {'id_docente': id_docente, 'id_semestre': id_semestre}
 
-    # No crear la fila en evaluacion aquí — se hará al guardar las respuestas.
     preguntas = [
         "¿Qué tan claro y comprensible explica los temas durante la clase?",
         "¿En qué medida domina el contenido de la materia que imparte?",
@@ -290,7 +310,7 @@ def admin():
     for result in cursor.stored_results():
         evaluaciones = result.fetchall()
     
-    # Obtener estadísticas (ahora devolvemos 6 conjuntos: total_campus, total_alumnos, por_campus, por_carrera, sin_evaluar, alumnos_estado)
+    # Obtener estadísticas 
     cursor.callproc("estadisticas_evaluacion")
     stats = {}
     results = list(cursor.stored_results())
@@ -300,10 +320,10 @@ def admin():
         stats['total_alumnos'] = results[1].fetchone()['total_alumnos']
         stats['por_campus'] = results[2].fetchall()
         stats['por_carrera'] = results[3].fetchall()
-        stats['sin_evaluar'] = results[4].fetchall()            # para compatibilidad
-        stats['alumnos_estado'] = results[5].fetchall()         # nuevo: lista con total_requerido/completadas/pendientes por alumno
+        stats['sin_evaluar'] = results[4].fetchall()            
+        stats['alumnos_estado'] = results[5].fetchall()         
     else:
-        # Mantener compatibilidad si el procedimiento no devolviera el nuevo conjunto
+        # Mantener compatibilidad si el procedimiento no devuelve el nuevo conjunto
         stats['total_campus'] = None
         stats['total_alumnos'] = None
         stats['por_campus'] = []
@@ -312,6 +332,55 @@ def admin():
         stats['alumnos_estado'] = []
 
     return render_template("admin.html", evaluaciones=evaluaciones, stats=stats)
+
+# Soporte GET y POST para mostrar el formulario de servicios 
+@app.route("/encuesta_servicios", methods=["GET", "POST"])
+def encuesta_servicios():
+    if session.get('tipo_usuario') != 'alumno':
+        return redirect(url_for('login'))
+    id_alumno = session.get('id_alumno')
+    # comprobar si ya hizo la encuesta de servicios
+    cursor.execute("SELECT 1 FROM evaluacion_servicios WHERE id_alumno = %s", (id_alumno,))
+    if cursor.fetchone():
+        return render_template("finale.html")
+    preguntas = [
+        "¿Cómo califica la limpieza general de las instalaciones?",
+        "¿Qué tan adecuadas son las instalaciones para el desarrollo académico?",
+        "¿Cómo evalúa el servicio de biblioteca?",
+        "¿Qué tan eficiente es el servicio de control escolar?",
+        "¿Cómo califica la atención del personal administrativo?",
+        "¿Qué tan bueno es el servicio de cafetería?",
+        "¿Cómo evalúa la seguridad dentro del campus?",
+        "¿Qué tan adecuado es el equipamiento de los laboratorios?",
+        "¿Cómo califica el servicio de internet y recursos tecnológicos?",
+        "¿Qué tan eficiente es el proceso de inscripción y reinscripción?"
+    ]
+    return render_template("servicios.html", preguntas=preguntas)
+
+# Guardar respuestas de la encuesta de servicios
+@app.route("/guardar_servicios", methods=["POST"])
+def guardar_servicios():
+    if session.get('tipo_usuario') != 'alumno':
+        return redirect(url_for('login'))
+    id_alumno = session.get('id_alumno')
+    # obtener campus alumno
+    cursor.execute("SELECT id_campus FROM alumnos WHERE id_alumno = %s", (id_alumno,))
+    row = cursor.fetchone()
+    id_campus = row['id_campus'] if row else None
+    # insertar evaluacion_servicios
+    cursor.execute("INSERT INTO evaluacion_servicios (id_alumno, id_campus) VALUES (%s, %s)", (id_alumno, id_campus))
+    db.commit()
+    id_eval_serv = cursor.lastrowid
+    # insertar respuestas_servicios
+    for key in request.form:
+        if key.startswith("pregunta_"):
+            pregunta = request.form.get(key, "").strip()
+            idx = key.split('_')[1]
+            escala = request.form.get(f"escala_{idx}", "").strip()
+            cursor.execute("INSERT INTO respuestas_servicios (id_evaluacion_servicios, pregunta, escala) VALUES (%s, %s, %s)",
+                           (id_eval_serv, pregunta, escala))
+    db.commit()
+    return render_template("resultado.html")
 
 # Ejecución de la app Flask en modo debug
 if __name__ == "__main__":

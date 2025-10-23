@@ -12,32 +12,69 @@ Descripción: Plantilla para la página principal de la encuesta docente.
 </head>
 <body>
     
-    <!-- Formulario principal para iniciar la encuesta -->
-    <form action="/encuesta" method="POST" id="formEncuesta">
-        <h1>Selecciona un docente y semestre</h1>
+    <h1>Sistema de Evaluación</h1>
 
-        <!-- Selección de docente (cargado dinámicamente con Jinja2) -->
-        <label>Docente:</label>
-        <select name="id_docente" id="id_docente" required onchange="cargarSemestres()">
-            {% for d in docentes %}
-            <option value="{{d.id_docente}}">{{d.nombre}} {{d.apellidop}} {{d.apellidom}}</option>
-            {% endfor %}
-        </select>
-        <br><br>
-
-        <!-- Selección de semestre (cargado dinámicamente con JS/fetch) -->
-        <label>Semestre:</label>
-        <select name="id_semestre" id="id_semestre" required>
-        </select>
-        <br><br>
-
-        <!-- Botón para iniciar la encuesta -->
-        <div style="text-align:center; margin-top:20px;" id="botonEncuestaDiv">
-            <button type="submit" id="botonEncuesta" style="background-color:#4CAF50; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">
-                Comenzar Encuesta
-            </button>
+    {% if servicios_pendiente %}
+    <!-- Sección de selección para encuesta de servicios -->
+    <div style="max-width:600px; margin:40px auto; text-align:center;">
+        <div style="background:#fff; padding:28px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.08);">
+            <h2 style="color:#eb2525; margin-bottom:12px;">Tienes pendiente: Evaluación de Servicios</h2>
+            <p>Antes de finalizar, por favor completa la evaluación de servicios de tu campus.</p>
+            <div style="margin-top:20px;">
+                <form action="{{ url_for('encuesta_servicios') }}" method="GET">
+                    <button type="submit" style="background-color:#4CAF50; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">
+                        Ir a Evaluación de Servicios
+                    </button>
+                </form>
+            </div>
         </div>
-    </form>
+    </div>
+    {% else %}
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1200px; margin: 0 auto;">
+        <!-- Sección de evaluación docente -->
+        {% if docentes %}
+        <form action="/encuesta" method="POST" id="formEncuesta">
+            <h2>Evaluación Docente</h2>
+
+            <!-- Selección de docente (cargado dinámicamente con Jinja2) -->
+            <label>Docente:</label>
+            <select name="id_docente" id="id_docente" required onchange="cargarSemestres()">
+                {% for d in docentes %}
+                <option value="{{d.id_docente}}">{{d.nombre}} {{d.apellidop}} {{d.apellidom}}</option>
+                {% endfor %}
+            </select>
+            <br><br>
+
+            <!-- Selección de semestre (cargado dinámicamente con JS/fetch) -->
+            <label>Semestre:</label>
+            <select name="id_semestre" id="id_semestre" required>
+            </select>
+            <br><br>
+
+            <!-- Botón para iniciar la encuesta -->
+            <div style="text-align:center; margin-top:20px;" id="botonEncuestaDiv">
+                <button type="submit" id="botonEncuesta" style="background-color:#4CAF50; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">
+                    Comenzar Encuesta
+                </button>
+            </div>
+        </form>
+        {% endif %}
+
+        <!-- Nueva sección de evaluación de servicios (solo si no está completada) -->
+        {% if not servicios_completado %}
+        <form action="{{ url_for('encuesta_servicios') }}" method="GET" id="formServicios">
+            <h2>Evaluación de Servicios</h2>
+            <p>Evalúa los servicios generales de tu campus</p>
+            
+            <div style="text-align:center; margin-top:20px;">
+                <button type="submit" style="background-color:#4CAF50; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">
+                    Comenzar Evaluación de Servicios
+                </button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+    {% endif %}
 
     <!-- Botón para cerrar sesión -->
     <div style="text-align:center; margin-top:20px;">
@@ -76,5 +113,4 @@ Descripción: Plantilla para la página principal de la encuesta docente.
     window.onload = cargarSemestres;
     </script>
 </body>
-</html>
 </html>

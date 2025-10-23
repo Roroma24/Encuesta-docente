@@ -116,6 +116,25 @@ CREATE TABLE comentarios (
     FOREIGN KEY (id_evaluacion) REFERENCES evaluacion(id_evaluacion)
 );
 
+-- Tabla de evaluación de servicios
+CREATE TABLE evaluacion_servicios (
+    id_evaluacion_servicios INT AUTO_INCREMENT PRIMARY KEY,
+    id_alumno INT NOT NULL,
+    id_campus INT NOT NULL,
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_alumno) REFERENCES alumnos(id_alumno),
+    FOREIGN KEY (id_campus) REFERENCES campus(id_campus)
+);
+
+-- Tabla de respuestas de los servicios
+CREATE TABLE respuestas_servicios (
+    id_respuesta INT AUTO_INCREMENT PRIMARY KEY,
+    id_evaluacion_servicios INT NOT NULL,
+    pregunta TEXT NOT NULL,
+    escala ENUM('1','2','3','4','5'),
+    FOREIGN KEY (id_evaluacion_servicios) REFERENCES evaluacion_servicios(id_evaluacion_servicios)
+);
+
 -- PROCEDIMIENTOS ALMACENADOS
 
 DELIMITER $$
@@ -208,6 +227,16 @@ END$$
 CREATE PROCEDURE ver_respuestas()
 BEGIN
     SELECT * FROM respuestas;
+END$$
+
+CREATE PROCEDURE ver_evaluacion_servicios()
+BEGIN
+    SELECT * FROM evaluacion_servicios;
+END$$
+
+CREATE PROCEDURE ver_respuestas_servicios()
+BEGIN
+    SELECT * FROM respuestas_servicios;
 END$$
 
 -- Procedimiento para generar reporte de evaluaciones 
@@ -304,12 +333,41 @@ END$$
 -- Procedimiento para estadísticas generales
 CREATE PROCEDURE estadisticas_evaluacion()
 BEGIN
-    -- Total de campus que evalúan
-    SELECT COUNT(DISTINCT id_campus) as total_campus FROM evaluacion e 
-    JOIN alumnos a ON e.id_alumno = a.id_alumno;
+    -- Total de campus que evalúan (solo alumnos que completaron todo)
+    SELECT COUNT(DISTINCT a.id_campus) as total_campus 
+    FROM alumnos a
+    WHERE NOT EXISTS (
+        SELECT 1 FROM semestre s 
+        WHERE s.id_campus = a.id_campus 
+        AND s.numero = a.numero_semestre
+        AND NOT EXISTS (
+            SELECT 1 FROM evaluacion e 
+            WHERE e.id_semestre = s.id_semestre 
+            AND e.id_alumno = a.id_alumno
+        )
+    )
+    AND EXISTS (
+        SELECT 1 FROM evaluacion_servicios es 
+        WHERE es.id_alumno = a.id_alumno
+    );
     
-    -- Total de alumnos que han evaluado
-    SELECT COUNT(DISTINCT id_alumno) as total_alumnos FROM evaluacion;
+    -- Total de alumnos que han completado todas las evaluaciones
+    SELECT COUNT(*) as total_alumnos 
+    FROM alumnos a
+    WHERE NOT EXISTS (
+        SELECT 1 FROM semestre s 
+        WHERE s.id_campus = a.id_campus 
+        AND s.numero = a.numero_semestre
+        AND NOT EXISTS (
+            SELECT 1 FROM evaluacion e 
+            WHERE e.id_semestre = s.id_semestre 
+            AND e.id_alumno = a.id_alumno
+        )
+    )
+    AND EXISTS (
+        SELECT 1 FROM evaluacion_servicios es 
+        WHERE es.id_alumno = a.id_alumno
+    );
     
     -- Alumnos por campus que han evaluado
     SELECT c.nombre as campus, COUNT(DISTINCT e.id_alumno) as alumnos
@@ -325,7 +383,7 @@ BEGIN
     JOIN carreras ca ON a.id_carrera = ca.id_carrera
     GROUP BY a.id_carrera;
     
-    -- Alumnos que no han evaluado (antiguo: sin evaluacion alguna)
+    -- Alumnos que no han evaluado 
     SELECT a.*, c.nombre as campus, ca.nombre as carrera
     FROM alumnos a
     LEFT JOIN evaluacion e ON a.id_alumno = e.id_alumno
@@ -333,7 +391,7 @@ BEGIN
     JOIN carreras ca ON a.id_carrera = ca.id_carrera
     WHERE e.id_evaluacion IS NULL;
 
-    -- Nuevo: Estado por alumno: total requerido / completadas / pendientes
+    -- Estado por alumno: total requerido / completadas / pendientes
     SELECT 
         a.id_alumno,
         a.matricula,
@@ -503,3 +561,5 @@ CALL ver_alumnos();
 CALL ver_evaluaciones();
 CALL ver_respuestas();
 CALL ver_comentarios();
+CALL ver_evaluacion_servicios();
+CALL ver_respuestas_servicios();
