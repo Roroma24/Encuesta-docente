@@ -135,6 +135,28 @@ CREATE TABLE respuestas_servicios (
     FOREIGN KEY (id_evaluacion_servicios) REFERENCES evaluacion_servicios(id_evaluacion_servicios)
 );
 
+-- Tabla para almacenar el historial de promedios
+CREATE TABLE historial_evaluacion (
+    id_historial INT AUTO_INCREMENT PRIMARY KEY,
+    id_docente INT,
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    promedio DECIMAL(4,2),
+    total_evaluaciones INT,
+    FOREIGN KEY (id_docente) REFERENCES docentes(id_docente)
+);
+
+-- Tabla para almacenar el historial de comentarios
+CREATE TABLE historial_comentarios (
+    id_historial_comentario INT AUTO_INCREMENT PRIMARY KEY,  
+    id_docente INT,
+    id_alumno INT,
+    comentario TEXT NOT NULL,
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    materia VARCHAR(256),
+    FOREIGN KEY (id_docente) REFERENCES docentes(id_docente),
+    FOREIGN KEY (id_alumno) REFERENCES alumnos(id_alumno)
+)$$
+
 -- PROCEDIMIENTOS ALMACENADOS
 
 DELIMITER $$
@@ -239,33 +261,50 @@ BEGIN
     SELECT * FROM respuestas_servicios;
 END$$
 
--- Procedimiento para generar reporte de evaluaciones 
-CREATE PROCEDURE reporte_evaluacion()
+-- <reemplaza aquí la función inválida fn_reporte_evaluacion> 
+-- Función que devuelve el reporte de evaluaciones para un docente en formato JSON
+CREATE FUNCTION fn_reporte_evaluacion(p_id_docente INT) 
+RETURNS JSON
+DETERMINISTIC
+READS SQL DATA
 BEGIN
-    SELECT 
-        d.nombre AS nombre_docente,
-        d.apellidop,
-        d.apellidom,
-        s.numero AS semestre_numero,
-        s.materia,
-        s.curso,
-        s.fecha_i,
-        s.fecha_fin,
-        SUM(CAST(r.escala AS UNSIGNED)) AS total_puntos,
-        COUNT(r.id_respuesta) AS total_respuestas,
-        ROUND(AVG(CAST(r.escala AS UNSIGNED)),2) AS promedio,
-        CASE
-            WHEN AVG(CAST(r.escala AS UNSIGNED)) >= 4.5 THEN 'Excelente profesor'
-            WHEN AVG(CAST(r.escala AS UNSIGNED)) >= 4.0 THEN 'Muy buen profesor'
-            WHEN AVG(CAST(r.escala AS UNSIGNED)) >= 3.0 THEN 'Buen profesor'
-            WHEN AVG(CAST(r.escala AS UNSIGNED)) >= 2.0 THEN 'Profesor regular'
-            ELSE 'Mal profesor'
-        END AS evaluacion_final
-    FROM docentes d
-    JOIN evaluacion e ON d.id_docente = e.id_docente
-    JOIN respuestas r ON e.id_evaluacion = r.id_evaluacion
-    JOIN semestre s ON e.id_semestre = s.id_semestre
-    GROUP BY d.id_docente, s.id_semestre;
+    DECLARE res JSON;
+
+    SELECT JSON_ARRAYAGG(obj) INTO res
+    FROM (
+        SELECT JSON_OBJECT(
+            'id_docente', d.id_docente,
+            'nombre_docente', d.nombre,
+            'apellidop', d.apellidop,
+            'apellidom', d.apellidom,
+            'id_semestre', s.id_semestre,
+            'semestre_numero', s.numero,
+            'materia', s.materia,
+            'curso', s.curso,
+            'fecha_i', DATE_FORMAT(s.fecha_i, '%Y-%m-%d'),
+            'fecha_fin', DATE_FORMAT(s.fecha_fin, '%Y-%m-%d'),
+            'total_puntos', COALESCE(SUM(CAST(r.escala AS UNSIGNED)), 0),
+            'total_respuestas', COUNT(r.id_respuesta),
+            'promedio', ROUND(AVG(CAST(r.escala AS UNSIGNED)),2),
+            'evaluacion_final',
+                CASE
+                    WHEN AVG(CAST(r.escala AS UNSIGNED)) >= 4.5 THEN 'Excelente profesor'
+                    WHEN AVG(CAST(r.escala AS UNSIGNED)) >= 4.0 THEN 'Muy buen profesor'
+                    WHEN AVG(CAST(r.escala AS UNSIGNED)) >= 3.0 THEN 'Buen profesor'
+                    WHEN AVG(CAST(r.escala AS UNSIGNED)) >= 2.0 THEN 'Profesor regular'
+                    ELSE 'Mal profesor'
+                END
+        ) AS obj
+        FROM docentes d
+        JOIN evaluacion e ON d.id_docente = e.id_docente
+        JOIN respuestas r ON e.id_evaluacion = r.id_evaluacion
+        JOIN semestre s ON e.id_semestre = s.id_semestre
+        WHERE d.id_docente = p_id_docente
+        GROUP BY d.id_docente, s.id_semestre
+        ORDER BY s.numero, s.fecha_i
+    ) AS sub;
+
+    RETURN COALESCE(res, JSON_ARRAY());
 END$$
 
 -- Procedimiento para registrar evaluacione
@@ -426,6 +465,72 @@ BEGIN
     LEFT JOIN campus c ON a.id_campus = c.id_campus
     LEFT JOIN carreras ca ON a.id_carrera = ca.id_carrera;
 END$$
+
+-- Trigger que registra el nuevo promedio cuando se inserta una respuesta
+CREATE TRIGGER trg_actualizar_historial_evaluacion 
+AFTER INSERT ON respuestas
+FOR EACH ROW
+BEGIN
+    DECLARE v_id_docente INT;
+    DECLARE v_promedio DECIMAL(4,2);
+    DECLARE v_total_evaluaciones INT;
+
+    -- Obtener el id_docente de la evaluación
+    SELECT e.id_docente INTO v_id_docente
+    FROM evaluacion e
+    WHERE e.id_evaluacion = NEW.id_evaluacion;
+
+    -- Calcular el nuevo promedio del docente
+    SELECT 
+        ROUND(AVG(CAST(r.escala AS UNSIGNED)),2),
+        COUNT(DISTINCT e.id_evaluacion)
+    INTO v_promedio, v_total_evaluaciones
+    FROM respuestas r
+    JOIN evaluacion e ON r.id_evaluacion = e.id_evaluacion
+    WHERE e.id_docente = v_id_docente;
+
+    -- Insertar el registro en el historial
+    INSERT INTO historial_evaluacion (id_docente, promedio, total_evaluaciones)
+    VALUES (v_id_docente, v_promedio, v_total_evaluaciones);
+END$$
+
+-- Trigger para registrar historial de comentarios
+CREATE TRIGGER trg_historial_comentarios
+AFTER INSERT ON comentarios
+FOR EACH ROW
+BEGIN
+    DECLARE v_id_docente INT;
+    DECLARE v_id_alumno INT;
+    DECLARE v_materia VARCHAR(256);
+    
+    -- Obtener datos de la evaluación relacionada
+    SELECT 
+        e.id_docente,
+        e.id_alumno,
+        s.materia
+    INTO 
+        v_id_docente,
+        v_id_alumno,
+        v_materia
+    FROM evaluacion e
+    JOIN semestre s ON e.id_semestre = s.id_semestre
+    WHERE e.id_evaluacion = NEW.id_evaluacion;
+
+    -- Registrar en el historial
+    INSERT INTO historial_comentarios (
+        id_docente,
+        id_alumno, 
+        comentario,
+        materia
+    ) VALUES (
+        v_id_docente,
+        v_id_alumno,
+        NEW.comentario,
+        v_materia
+    );
+END$$
+
+DELIMITER ;
 
 -- Insertar campus
 INSERT INTO campus (nombre, direccion, telefono) VALUES

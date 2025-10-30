@@ -6,6 +6,7 @@ Descripción: Archivo principal de la aplicación Flask para la evaluación doce
 # Importación de librerías y configuración de la app Flask
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 import mysql.connector
+import json
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"  
@@ -14,7 +15,7 @@ app.secret_key = "supersecretkey"
 db = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="Ror@$2405",
+    password="Saltamontes71#",
     database="evaluacion_d"  
 )
 cursor = db.cursor(dictionary=True)
@@ -160,17 +161,36 @@ def profesor():
     if session.get('tipo_usuario') != 'docente':
         return redirect(url_for('login'))
     id_docente = session.get('id_docente')
-    cursor.callproc("reporte_evaluacion")
     resultados = []
-    for result in cursor.stored_results():
-        for row in result.fetchall():
-            if row['nombre_docente'] and row.get('nombre_docente') and row.get('nombre_docente') != '':
-                cursor2 = db.cursor(dictionary=True)
-                cursor2.execute("SELECT id_docente FROM docentes WHERE nombre = %s AND apellidop = %s AND apellidom = %s", (row['nombre_docente'], row['apellidop'], row['apellidom']))
-                doc = cursor2.fetchone()
-                cursor2.close()
-                if doc and doc['id_docente'] == id_docente:
-                    resultados.append(row)
+    try:
+        # Llamar la función que devuelve JSON
+        cursor.execute("SELECT fn_reporte_evaluacion(%s) AS data", (id_docente,))
+        row = cursor.fetchone()
+        data_json = row['data'] if row else None
+        if data_json:
+            # mysql-connector devuelve JSON como str; parsear a lista de dicts
+            resultados = json.loads(data_json)
+        else:
+            resultados = []
+    except Exception:
+        # Fallback: si la función no está disponible o falla, usar el procedimiento antiguo y filtrar
+        try:
+            cursor.callproc("reporte_evaluacion")
+            for result in cursor.stored_results():
+                for row in result.fetchall():
+                    if row and row.get('nombre_docente'):
+                        cursor2 = db.cursor(dictionary=True)
+                        cursor2.execute(
+                            "SELECT id_docente FROM docentes WHERE nombre = %s AND apellidop = %s AND apellidom = %s",
+                            (row['nombre_docente'], row['apellidop'], row['apellidom'])
+                        )
+                        doc = cursor2.fetchone()
+                        cursor2.close()
+                        if doc and doc.get('id_docente') == id_docente:
+                            resultados.append(row)
+        except Exception:
+            # En caso de error silencioso, dejar resultados vacíos
+            resultados = []
     return render_template("profesor.html", resultados=resultados)
 
 # Ruta para obtener semestres disponibles para evaluar a un docente
