@@ -389,6 +389,24 @@ BEGIN
     GROUP BY d.id_docente, s.id_materia_impartida;
 END$$
 
+-- Procedimiento para reporte administrativo de evaluación de servicios
+CREATE PROCEDURE reporte_admin_servicios()
+BEGIN
+    SELECT 
+        c.nombre AS campus_nombre,
+        COUNT(DISTINCT es.id_alumno) AS total_evaluaciones,
+        ROUND(AVG(CAST(rs.escala AS UNSIGNED)), 2) AS promedio,
+        CASE
+            WHEN AVG(CAST(rs.escala AS UNSIGNED)) >= 4.5 THEN 'Excelente'
+            WHEN AVG(CAST(rs.escala AS UNSIGNED)) >= 3.5 THEN 'Satisfactorio'
+            ELSE 'Requiere Atención'
+        END AS estatus_servicios
+    FROM evaluacion_servicios es
+    JOIN campus c ON es.id_campus = c.id_campus
+    JOIN respuestas_servicios rs ON es.id_evaluacion_servicios = rs.id_evaluacion_servicios
+    GROUP BY c.id_campus;
+END$$
+
 -- Procedimiento para estadísticas generales
 CREATE PROCEDURE estadisticas_evaluacion()
 BEGIN

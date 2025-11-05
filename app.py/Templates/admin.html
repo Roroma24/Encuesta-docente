@@ -230,8 +230,38 @@ Descripción: Plantilla para el panel administrativo.
                     </tr>
                     {% endfor %}
                 </table>
+            </div>
+        </div>
+
+        <!-- Evaluaciones de Servicios -->
+        <div class="stat-card">
+            <div class="stat-title">Evaluaciones de Servicios Escolares</div>
+            <div class="stat-content">
+                <table class="evaluation-table">
+                    <tr>
+                        <th>Campus</th>
+                        <th>Total Evaluaciones</th>
+                        <th>Promedio</th>
+                        <th>Estado de Servicios</th>
+                    </tr>
+                    {% for serv in servicios %}
+                    <tr>
+                        <td>{{ serv.campus_nombre }}</td>
+                        <td>{{ serv.total_evaluaciones }}</td>
+                        <td
+                            class="promedio-cell {% if serv.promedio >= 4.5 %}promedio-alto{% elif serv.promedio >= 3.5 %}promedio-medio{% else %}promedio-bajo{% endif %}">
+                            {{ serv.promedio }}
+                        </td>
+                        <td class="status-{{ serv.estatus_servicios|lower|replace(' ', '-') }}">
+                            {{ serv.estatus_servicios }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
                 <a href="{{ url_for('logout') }}" class="logout-link">Cerrar sesión</a>
             </div>
+        </div>
+    </div>
 </body>
 
 </html>
