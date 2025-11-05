@@ -39,6 +39,7 @@ CREATE TABLE docentes (
     departamento VARCHAR(256) NOT NULL,
     fecha_nacimiento DATE NULL,
     id_campus INT NOT NULL,
+    password VARCHAR(255) NULL,
     FOREIGN KEY (id_campus) REFERENCES campus(id_campus)
 );
 
@@ -54,9 +55,9 @@ CREATE TABLE campus_carrera (
     FOREIGN KEY (carrera_id) REFERENCES carreras(id_carrera)
 );
 
--- Tabla de semestres
-CREATE TABLE semestre (
-    id_semestre INT AUTO_INCREMENT PRIMARY KEY,
+-- Tabla de materias impartidas
+CREATE TABLE materias_impartidas (
+    id_materia_impartida INT AUTO_INCREMENT PRIMARY KEY,
     id_docente INT NOT NULL,
     numero ENUM('1','2','3','4','5','6','7','8','9'),
     materia VARCHAR(256),
@@ -82,6 +83,7 @@ CREATE TABLE alumnos (
     id_carrera INT NULL,
     numero_semestre ENUM('1','2','3','4','5','6','7','8','9') NULL,
     fecha_nacimiento DATE NULL,
+    password VARCHAR(255) NULL,
     FOREIGN KEY (id_campus) REFERENCES campus(id_campus),
     FOREIGN KEY (id_carrera) REFERENCES carreras(id_carrera)
 );
@@ -90,11 +92,11 @@ CREATE TABLE alumnos (
 CREATE TABLE evaluacion (
     id_evaluacion INT AUTO_INCREMENT PRIMARY KEY,
     id_docente INT NOT NULL,
-    id_semestre INT NOT NULL,
+    id_materia_impartida INT NOT NULL,   
     id_alumno INT NOT NULL,
     fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (id_docente) REFERENCES docentes(id_docente),
-    FOREIGN KEY (id_semestre) REFERENCES semestre(id_semestre),
+    FOREIGN KEY (id_materia_impartida) REFERENCES materias_impartidas(id_materia_impartida),
     FOREIGN KEY (id_alumno) REFERENCES alumnos(id_alumno)
 );
 
@@ -155,7 +157,14 @@ CREATE TABLE historial_comentarios (
     materia VARCHAR(256),
     FOREIGN KEY (id_docente) REFERENCES docentes(id_docente),
     FOREIGN KEY (id_alumno) REFERENCES alumnos(id_alumno)
-)$$
+);
+
+-- Tabla de administradores
+CREATE TABLE admin_users (
+    id_admin INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NULL
+);
 
 -- PROCEDIMIENTOS ALMACENADOS
 
@@ -170,11 +179,12 @@ CREATE PROCEDURE insertar_docente_con_campus(
     IN p_correo VARCHAR(256),
     IN p_departamento VARCHAR(256),
     IN p_fecha_nacimiento DATE,
-    IN p_id_campus INT
+    IN p_id_campus INT,
+    IN p_password VARCHAR(255)
 )
 BEGIN
-    INSERT INTO docentes (matricula, nombre, apellidop, apellidom, correo, departamento, fecha_nacimiento, id_campus)
-    VALUES (p_matricula, p_nombre, p_apellidop, p_apellidom, p_correo, p_departamento, p_fecha_nacimiento, p_id_campus);
+    INSERT INTO docentes (matricula, nombre, apellidop, apellidom, correo, departamento, fecha_nacimiento, id_campus, password)
+    VALUES (p_matricula, p_nombre, p_apellidop, p_apellidom, p_correo, p_departamento, p_fecha_nacimiento, p_id_campus, p_password);
 END$$
 
 -- Procedimiento para insertar semestre con campus y carrera 
@@ -194,7 +204,7 @@ BEGIN
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'La carrera no está disponible en el campus seleccionado (proc insertar_semestre_con_vinculos).';
         END IF;
     END IF;
-    INSERT INTO semestre (id_docente, numero, materia, curso, fecha_i, fecha_fin, id_campus, id_carrera)
+    INSERT INTO materias_impartidas (id_docente, numero, materia, curso, fecha_i, fecha_fin, id_campus, id_carrera)
     VALUES (p_id_docente, p_numero, p_materia, p_curso, p_fecha_i, p_fecha_fin, p_id_campus, p_id_carrera);
 END$$
 
@@ -208,7 +218,8 @@ CREATE PROCEDURE insertar_alumno_con_vinculos(
     IN p_id_campus INT,
     IN p_id_carrera INT,
     IN p_numero_semestre ENUM('1','2','3','4','5','6','7','8','9'),
-    IN p_fecha_nacimiento DATE
+    IN p_fecha_nacimiento DATE,
+    IN p_password VARCHAR(255)
 )
 BEGIN
     IF p_id_campus IS NOT NULL AND p_id_carrera IS NOT NULL THEN
@@ -216,8 +227,8 @@ BEGIN
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'La carrera no está disponible en el campus seleccionado (proc insertar_alumno_con_vinculos).';
         END IF;
     END IF;
-    INSERT INTO alumnos (matricula, nombre, apellidop, apellidom, correo, id_campus, id_carrera, numero_semestre, fecha_nacimiento)
-    VALUES (p_matricula, p_nombre, p_apellidop, p_apellidom, p_correo, p_id_campus, p_id_carrera, p_numero_semestre, p_fecha_nacimiento);
+    INSERT INTO alumnos (matricula, nombre, apellidop, apellidom, correo, id_campus, id_carrera, numero_semestre, fecha_nacimiento, password)
+    VALUES (p_matricula, p_nombre, p_apellidop, p_apellidom, p_correo, p_id_campus, p_id_carrera, p_numero_semestre, p_fecha_nacimiento, p_password);
 END$$
 
 -- Procedimientos de consulta 
@@ -228,7 +239,17 @@ END$$
 
 CREATE PROCEDURE ver_semestres()
 BEGIN
-    SELECT * FROM semestre;
+    SELECT 
+        id_materia_impartida,
+        id_docente,
+        numero AS semestre,   
+        materia,
+        curso,
+        fecha_i,
+        fecha_fin,
+        id_campus,
+        id_carrera
+    FROM materias_impartidas;
 END$$
 
 CREATE PROCEDURE ver_alumnos()
@@ -261,7 +282,6 @@ BEGIN
     SELECT * FROM respuestas_servicios;
 END$$
 
--- <reemplaza aquí la función inválida fn_reporte_evaluacion> 
 -- Función que devuelve el reporte de evaluaciones para un docente en formato JSON
 CREATE FUNCTION fn_reporte_evaluacion(p_id_docente INT) 
 RETURNS JSON
@@ -277,7 +297,7 @@ BEGIN
             'nombre_docente', d.nombre,
             'apellidop', d.apellidop,
             'apellidom', d.apellidom,
-            'id_semestre', s.id_semestre,
+            'id_materia_impartida', s.id_materia_impartida,
             'semestre_numero', s.numero,
             'materia', s.materia,
             'curso', s.curso,
@@ -298,24 +318,24 @@ BEGIN
         FROM docentes d
         JOIN evaluacion e ON d.id_docente = e.id_docente
         JOIN respuestas r ON e.id_evaluacion = r.id_evaluacion
-        JOIN semestre s ON e.id_semestre = s.id_semestre
+        JOIN materias_impartidas s ON e.id_materia_impartida = s.id_materia_impartida
         WHERE d.id_docente = p_id_docente
-        GROUP BY d.id_docente, s.id_semestre
+        GROUP BY d.id_docente, s.id_materia_impartida
         ORDER BY s.numero, s.fecha_i
     ) AS sub;
 
     RETURN COALESCE(res, JSON_ARRAY());
 END$$
 
--- Procedimiento para registrar evaluacione
+-- Procedimiento para registrar evaluaciones
 CREATE PROCEDURE registrar_evaluacion(
     IN p_id_docente INT,
-    IN p_id_semestre INT,
+    IN p_id_materia_impartida INT,
     IN p_id_alumno INT
 )
 BEGIN
-    INSERT INTO evaluacion (id_docente, id_semestre, id_alumno)
-    VALUES (p_id_docente, p_id_semestre, p_id_alumno);
+    INSERT INTO evaluacion (id_docente, id_materia_impartida, id_alumno)
+    VALUES (p_id_docente, p_id_materia_impartida, p_id_alumno);
 END$$
 
 -- Procedimiento para insertar respuestas
@@ -364,24 +384,24 @@ BEGIN
     FROM docentes d
     JOIN evaluacion e ON d.id_docente = e.id_docente
     JOIN respuestas r ON e.id_evaluacion = r.id_evaluacion
-    JOIN semestre s ON e.id_semestre = s.id_semestre
+    JOIN materias_impartidas s ON e.id_materia_impartida = s.id_materia_impartida
     JOIN campus c ON d.id_campus = c.id_campus
-    GROUP BY d.id_docente, s.id_semestre;
+    GROUP BY d.id_docente, s.id_materia_impartida;
 END$$
 
 -- Procedimiento para estadísticas generales
 CREATE PROCEDURE estadisticas_evaluacion()
 BEGIN
-    -- Total de campus que evalúan (solo alumnos que completaron todo)
+    -- Total de campus que evalúan (solo alumnos que completaron todo, incluyendo servicios)
     SELECT COUNT(DISTINCT a.id_campus) as total_campus 
     FROM alumnos a
     WHERE NOT EXISTS (
-        SELECT 1 FROM semestre s 
-        WHERE s.id_campus = a.id_campus 
-        AND s.numero = a.numero_semestre
+        SELECT 1 FROM materias_impartidas m 
+        WHERE m.id_campus = a.id_campus 
+        AND m.numero = a.numero_semestre
         AND NOT EXISTS (
             SELECT 1 FROM evaluacion e 
-            WHERE e.id_semestre = s.id_semestre 
+            WHERE e.id_materia_impartida = m.id_materia_impartida 
             AND e.id_alumno = a.id_alumno
         )
     )
@@ -390,16 +410,16 @@ BEGIN
         WHERE es.id_alumno = a.id_alumno
     );
     
-    -- Total de alumnos que han completado todas las evaluaciones
+    -- Total de alumnos que han completado todas las evaluaciones (docentes + servicios)
     SELECT COUNT(*) as total_alumnos 
     FROM alumnos a
     WHERE NOT EXISTS (
-        SELECT 1 FROM semestre s 
-        WHERE s.id_campus = a.id_campus 
-        AND s.numero = a.numero_semestre
+        SELECT 1 FROM materias_impartidas m 
+        WHERE m.id_campus = a.id_campus 
+        AND m.numero = a.numero_semestre
         AND NOT EXISTS (
             SELECT 1 FROM evaluacion e 
-            WHERE e.id_semestre = s.id_semestre 
+            WHERE e.id_materia_impartida = m.id_materia_impartida 
             AND e.id_alumno = a.id_alumno
         )
     )
@@ -408,7 +428,7 @@ BEGIN
         WHERE es.id_alumno = a.id_alumno
     );
     
-    -- Alumnos por campus que han evaluado
+    -- Alumnos por campus que han evaluado (sólo con evaluaciones docentes)
     SELECT c.nombre as campus, COUNT(DISTINCT e.id_alumno) as alumnos
     FROM evaluacion e
     JOIN alumnos a ON e.id_alumno = a.id_alumno
@@ -422,7 +442,7 @@ BEGIN
     JOIN carreras ca ON a.id_carrera = ca.id_carrera
     GROUP BY a.id_carrera;
     
-    -- Alumnos que no han evaluado 
+    -- Alumnos que no han evaluado (sin evaluacion docente alguna)
     SELECT a.*, c.nombre as campus, ca.nombre as carrera
     FROM alumnos a
     LEFT JOIN evaluacion e ON a.id_alumno = e.id_alumno
@@ -430,7 +450,7 @@ BEGIN
     JOIN carreras ca ON a.id_carrera = ca.id_carrera
     WHERE e.id_evaluacion IS NULL;
 
-    -- Estado por alumno: total requerido / completadas / pendientes
+    -- Estado por alumno: total requerido / completadas / pendientes 
     SELECT 
         a.id_alumno,
         a.matricula,
@@ -439,27 +459,27 @@ BEGIN
         c.nombre as campus,
         ca.nombre as carrera,
         COALESCE((
-            SELECT COUNT(*) FROM semestre s 
-            WHERE s.id_campus = a.id_campus AND s.numero = a.numero_semestre
+            SELECT COUNT(*) FROM materias_impartidas m 
+            WHERE m.id_campus = a.id_campus AND m.numero = a.numero_semestre
         ),0) AS total_requerido,
         COALESCE((
-            SELECT COUNT(DISTINCT e.id_semestre) 
+            SELECT COUNT(DISTINCT e.id_materia_impartida) 
             FROM evaluacion e 
-            JOIN semestre s2 ON e.id_semestre = s2.id_semestre
+            JOIN materias_impartidas m2 ON e.id_materia_impartida = m2.id_materia_impartida
             WHERE e.id_alumno = a.id_alumno 
-              AND s2.id_campus = a.id_campus 
-              AND s2.numero = a.numero_semestre
+              AND m2.id_campus = a.id_campus 
+              AND m2.numero = a.numero_semestre
         ),0) AS completadas,
         (COALESCE((
-            SELECT COUNT(*) FROM semestre s 
-            WHERE s.id_campus = a.id_campus AND s.numero = a.numero_semestre
+            SELECT COUNT(*) FROM materias_impartidas m 
+            WHERE m.id_campus = a.id_campus AND m.numero = a.numero_semestre
         ),0) - COALESCE((
-            SELECT COUNT(DISTINCT e.id_semestre) 
+            SELECT COUNT(DISTINCT e.id_materia_impartida) 
             FROM evaluacion e 
-            JOIN semestre s2 ON e.id_semestre = s2.id_semestre
+            JOIN materias_impartidas m2 ON e.id_materia_impartida = m2.id_materia_impartida
             WHERE e.id_alumno = a.id_alumno 
-              AND s2.id_campus = a.id_campus 
-              AND s2.numero = a.numero_semestre
+              AND m2.id_campus = a.id_campus 
+              AND m2.numero = a.numero_semestre
         ),0)) AS pendientes
     FROM alumnos a
     LEFT JOIN campus c ON a.id_campus = c.id_campus
@@ -494,7 +514,7 @@ BEGIN
     VALUES (v_id_docente, v_promedio, v_total_evaluaciones);
 END$$
 
--- Trigger para registrar historial de comentarios
+-- Trigger que registra el comentario en el historial cuando se inserta un nuevo comentario
 CREATE TRIGGER trg_historial_comentarios
 AFTER INSERT ON comentarios
 FOR EACH ROW
@@ -507,13 +527,13 @@ BEGIN
     SELECT 
         e.id_docente,
         e.id_alumno,
-        s.materia
+        m.materia
     INTO 
         v_id_docente,
         v_id_alumno,
         v_materia
     FROM evaluacion e
-    JOIN semestre s ON e.id_semestre = s.id_semestre
+    JOIN materias_impartidas m ON e.id_materia_impartida = m.id_materia_impartida
     WHERE e.id_evaluacion = NEW.id_evaluacion;
 
     -- Registrar en el historial
@@ -625,6 +645,12 @@ INSERT INTO docentes (matricula, nombre, apellidop, apellidom, correo, departame
 -- Monterrey Cumbres (prefijo 14)
 ('14D00001', 'Ana Laura', 'Hidalgo', 'Paz', 'analaura.hidalgo@uvm.mx', 'Sistemas', '1981-09-28', 14);
 
+CALL insertar_docente_con_campus('01D00005','Roberto','Salinas','Vega','roberto.salinas@uvm.mx','Física','1975-04-12',2, NULL);
+CALL insertar_docente_con_campus('01D00006','Laura','Gómez','Rivera','laura.gomez@uvm.mx','Química','1980-09-05',2, NULL);
+CALL insertar_docente_con_campus('01D00007','Daniel','Pérez','Ortiz','daniel.perez@uvm.mx','Matemáticas','1978-02-20',2, NULL);
+CALL insertar_docente_con_campus('01D00008','Emily','Torres','Castillo','emily.torres@uvm.mx','Idiomas','1984-07-15',2, NULL);
+CALL insertar_docente_con_campus('01D00009','Mauricio','Hernández','Luna','mauricio.hernandez@uvm.mx','Computación','1979-11-30',2, NULL);
+
 -- Insertar semestres 
 CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula='01D00001'), '3', 'Programación Web', 'PW-301', '2025-01-15', '2025-05-30', 2, 1);
 CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula='01D00002'), '5', 'Producción Industrial', 'PI-501', '2025-01-15', '2025-05-30', 2, 2);
@@ -641,23 +667,35 @@ CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matri
 CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula='14D00001'), '8', 'Desarrollo Móvil', 'DM-801', '2025-01-15', '2025-05-30', 14, 1);
 CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula='01D00003'), '3', 'Programación Avanzada', 'PA-302', '2025-01-15', '2025-05-30', 2, 1);
 CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula='01D00004'), '3', 'Bases de Datos', 'BD-303', '2025-01-15', '2025-05-30', 2, 1);
+CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula='01D00005'), '1', 'Física', 'FI-101', '2025-01-15', '2025-05-30', 2, 1);
+CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula='01D00006'), '1', 'Química', 'QU-101', '2025-01-15', '2025-05-30', 2, 1);
+CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula='01D00007'), '1', 'Álgebra', 'AL-101', '2025-01-15', '2025-05-30', 2, 1);
+CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula='01D00008'), '1', 'Inglés I', 'IN-101', '2025-01-15', '2025-05-30', 2, 1);
+CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula='01D00009'), '1', 'Arquitectura de Computadoras', 'AC-101', '2025-01-15', '2025-05-30', 2, 1);
+CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula = '01D00008'), '1', 'Empatía para resolver', 'EM-101', '2025-01-15', '2025-05-30', 2, 1);
 
 -- Insertar alumnos vinculados a campus y carrera 
-CALL insertar_alumno_con_vinculos('01A00001', 'Santiago', 'Vargas', 'Lara', 'santiago.vargas@uvmnet.edu', 2, 1, '3', '2003-02-14');
-CALL insertar_alumno_con_vinculos('01A00002', 'Camila', 'Gómez', 'Ruiz', 'camila.gomez@uvmnet.edu', 2, 2, '5', '2002-06-01');
-CALL insertar_alumno_con_vinculos('02A00001', 'Diego', 'Molina', 'Paz', 'diego.molina@uvmnet.edu', 1, 3, '4', '2004-01-20');
-CALL insertar_alumno_con_vinculos('02A00002', 'Karina', 'Soto', 'Vázquez', 'karina.soto@uvmnet.edu', 1, 1, '2', '2003-09-09');
-CALL insertar_alumno_con_vinculos('03A00001', 'Andrés', 'Reyes', 'Ortiz', 'andres.reyes@uvmnet.edu', 3, 1, '6', '2001-12-12');
-CALL insertar_alumno_con_vinculos('04A00001', 'María José', 'Ponce', 'Guerra', 'mariajose.ponce@uvmnet.edu', 4, 5, '7', '2000-07-07');
-CALL insertar_alumno_con_vinculos('07A00001', 'Jorge', 'Medina', 'Silva', 'jorge.medina@uvmnet.edu', 7, 6, '4', '2002-11-11');
-CALL insertar_alumno_con_vinculos('08A00001', 'Valeria', 'Ramírez', 'Lopez', 'valeria.ramirez@uvmnet.edu', 8, 1, '3', '2003-03-03');
-CALL insertar_alumno_con_vinculos('10A00001', 'Pablo', 'Santos', 'Hernández', 'pablo.santos@uvmnet.edu', 10, 4, '2', '2004-10-10');
-CALL insertar_alumno_con_vinculos('16A00001', 'Andrea', 'Cervantes', 'Núñez', 'andrea.cervantes@uvmnet.edu', 16, 2, '5', '2001-05-05');
-CALL insertar_alumno_con_vinculos('01A00003', 'Mariana', 'López', 'Ramos', 'mariana.lopez@uvmnet.edu', 2, 1, '3', '2003-07-18');
-CALL insertar_alumno_con_vinculos('01A00004', 'Diego', 'Fernández', 'Ruiz', 'diego.fernandez@uvmnet.edu', 2, 1, '3', '2003-11-02');
-CALL insertar_alumno_con_vinculos('01A00005', 'Sofía', 'Vega', 'Martínez', 'sofia.vega@uvmnet.edu', 2, 1, '3', '2003-05-12');
-CALL insertar_alumno_con_vinculos('17A00001', 'Luis', 'Beltrán', 'Ramos', 'luis.beltran@uvmnet.edu', 17, 3, '1', '2004-04-04');
-CALL insertar_alumno_con_vinculos('14A00001', 'Sergio', 'Duarte', 'Mora', 'sergio.duarte@uvmnet.edu', 14, 1, '8', '1999-12-01');
+CALL insertar_alumno_con_vinculos('01A00001', 'Santiago', 'Vargas', 'Lara', 'santiago.vargas@uvmnet.edu', 2, 1, '3', '2003-02-14', NULL);
+CALL insertar_alumno_con_vinculos('01A00002', 'Camila', 'Gómez', 'Ruiz', 'camila.gomez@uvmnet.edu', 2, 2, '5', '2002-06-01', NULL);
+CALL insertar_alumno_con_vinculos('02A00001', 'Diego', 'Molina', 'Paz', 'diego.molina@uvmnet.edu', 1, 3, '4', '2004-01-20', NULL);
+CALL insertar_alumno_con_vinculos('02A00002', 'Karina', 'Soto', 'Vázquez', 'karina.soto@uvmnet.edu', 1, 1, '2', '2003-09-09', NULL);
+CALL insertar_alumno_con_vinculos('03A00001', 'Andrés', 'Reyes', 'Ortiz', 'andres.reyes@uvmnet.edu', 3, 1, '6', '2001-12-12', NULL);
+CALL insertar_alumno_con_vinculos('04A00001', 'María José', 'Ponce', 'Guerra', 'mariajose.ponce@uvmnet.edu', 4, 5, '7', '2000-07-07', NULL);
+CALL insertar_alumno_con_vinculos('07A00001', 'Jorge', 'Medina', 'Silva', 'jorge.medina@uvmnet.edu', 7, 6, '4', '2002-11-11', NULL);
+CALL insertar_alumno_con_vinculos('08A00001', 'Valeria', 'Ramírez', 'Lopez', 'valeria.ramirez@uvmnet.edu', 8, 1, '3', '2003-03-03', NULL);
+CALL insertar_alumno_con_vinculos('10A00001', 'Pablo', 'Santos', 'Hernández', 'pablo.santos@uvmnet.edu', 10, 4, '2', '2004-10-10', NULL);
+CALL insertar_alumno_con_vinculos('16A00001', 'Andrea', 'Cervantes', 'Núñez', 'andrea.cervantes@uvmnet.edu', 16, 2, '5', '2001-05-05', NULL);
+CALL insertar_alumno_con_vinculos('01A00003', 'Mariana', 'López', 'Ramos', 'mariana.lopez@uvmnet.edu', 2, 1, '3', '2003-07-18', NULL);
+CALL insertar_alumno_con_vinculos('01A00004', 'Diego', 'Fernández', 'Ruiz', 'diego.fernandez@uvmnet.edu', 2, 1, '3', '2003-11-02', NULL);
+CALL insertar_alumno_con_vinculos('01A00005', 'Sofía', 'Vega', 'Martínez', 'sofia.vega@uvmnet.edu', 2, 1, '3', '2003-05-12', NULL);
+CALL insertar_alumno_con_vinculos('17A00001', 'Luis', 'Beltrán', 'Ramos', 'luis.beltran@uvmnet.edu', 17, 3, '1', '2004-04-04', NULL);
+CALL insertar_alumno_con_vinculos('14A00001', 'Sergio', 'Duarte', 'Mora', 'sergio.duarte@uvmnet.edu', 14, 1, '8', '1999-12-01', NULL);
+CALL insertar_alumno_con_vinculos('01A00006', 'Georgina Wendy', 'Mondragón', 'Vázquez', 'georgina.mondragon@uvmnet.edu', 2, 1, '1', '2006-03-10', NULL);
+CALL insertar_alumno_con_vinculos('01A00007', 'Brenda Sofía', 'Hernández', 'López', 'brenda.hernandez@uvmnet.edu', 2, 1, '1', '2006-04-05', NULL);
+CALL insertar_alumno_con_vinculos('01A00008', 'Juan Carlos', 'Ruiz', 'Martínez', 'juan.carlos.ruiz@uvmnet.edu', 2, 1, '1', '2006-02-20', NULL);
+
+-- Insertar admin 
+INSERT INTO admin_users (username, password) VALUES ('admin', NULL) ON DUPLICATE KEY UPDATE username=username;
 
 -- Consultas directas
 CALL ver_docentes();

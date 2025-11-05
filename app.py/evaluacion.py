@@ -7,6 +7,7 @@ Descripción: Archivo principal de la aplicación Flask para la evaluación doce
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 import mysql.connector
 import json
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"  
@@ -15,10 +16,28 @@ app.secret_key = "supersecretkey"
 db = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="Saltamontes71#",
+    password="Ror@$2405",
     database="evaluacion_d"  
 )
 cursor = db.cursor(dictionary=True)
+
+# Asegurar que exista admin en la tabla admin_users y tenga password hasheada por defecto
+try:
+    cursor.execute("SELECT * FROM admin_users WHERE username = %s", ("admin",))
+    admin_row = cursor.fetchone()
+    if not admin_row:
+        pw_hash = generate_password_hash("admin1")
+        cursor.execute("INSERT INTO admin_users (username, password) VALUES (%s, %s)", ("admin", pw_hash))
+        db.commit()
+    else:
+        # si existe pero password NULL, establecer por defecto 'admin1' hasheada
+        if not admin_row.get('password'):
+            pw_hash = generate_password_hash("admin1")
+            cursor.execute("UPDATE admin_users SET password = %s WHERE username = %s", (pw_hash, "admin"))
+            db.commit()
+except Exception:
+    # no bloquear arranque si falla este paso
+    pass
 
 # Ruta principal: Login de usuario (alumno o docente)
 @app.route("/", methods=["GET", "POST"])
@@ -26,25 +45,41 @@ def login():
     if request.method == "POST":
         matricula = request.form.get("matricula", "").strip()
         password = request.form.get("password", "").strip()
-        
-        # Verificar si es admin 
-        if matricula == "admin" and password == "admin1":
-            session['tipo_usuario'] = 'admin'
-            return redirect(url_for('admin'))
-            
-        # Para alumnos y docentes, validar formato de fecha
+
+        # --- ADMIN: validar contra tabla admin_users ---
+        if matricula.lower() == "admin":
+            cursor.execute("SELECT password FROM admin_users WHERE username = %s", ("admin",))
+            row = cursor.fetchone()
+            if row and row.get('password'):
+                if check_password_hash(row['password'], password):
+                    session['tipo_usuario'] = 'admin'
+                    session['matricula'] = 'admin'
+                    return redirect(url_for('admin'))
+                else:
+                    return render_template("login.html", error="Matrícula o contraseña incorrecta")
+            else:
+                # fallback seguro: si por algún motivo no hay hash, rechazar (la app inicializa uno)
+                return render_template("login.html", error="Cuenta admin no configurada correctamente")
+
+        # Para alumnos y docentes: validar formato de contraseña (DDMMYY) o hash existente
         if not (len(password) == 6 and password.isdigit()):
             return render_template("login.html", error="Formato de contraseña incorrecto para alumnos/docentes (debe ser DDMMYY)")
-        
-        cursor.callproc("ver_alumnos")
-        alumno = None
-        for result in cursor.stored_results():
-            for row in result.fetchall():
-                if row['matricula'] == matricula:
-                    alumno = row
-                    break
+
+        # --- ALUMNO: buscar por matrícula y validar ---
+        cursor.execute("SELECT * FROM alumnos WHERE matricula = %s", (matricula,))
+        alumno = cursor.fetchone()
         if alumno:
-            # Validar contraseña: fecha de nacimiento en formato DDMMYY 
+            stored_pw = alumno.get('password')
+            # si hay contraseña hasheada almacenada -> verificar
+            if stored_pw:
+                if check_password_hash(stored_pw, password):
+                    session['tipo_usuario'] = 'alumno'
+                    session['matricula'] = matricula
+                    session['id_alumno'] = alumno['id_alumno']
+                    return redirect(url_for('index'))
+                else:
+                    return render_template("login.html", error="Matrícula o contraseña incorrecta")
+            # si no hay password almacenada -> validar con fecha de nacimiento y migrar a hash
             fecha_nac = alumno.get('fecha_nacimiento')
             if fecha_nac:
                 try:
@@ -54,21 +89,30 @@ def login():
             else:
                 expected = ""
             if password == expected and expected != "":
+                # migrar a hash seguro y actualizar BD
+                new_hash = generate_password_hash(password)
+                cursor.execute("UPDATE alumnos SET password = %s WHERE id_alumno = %s", (new_hash, alumno['id_alumno']))
+                db.commit()
                 session['tipo_usuario'] = 'alumno'
                 session['matricula'] = matricula
                 session['id_alumno'] = alumno['id_alumno']
                 return redirect(url_for('index'))
-            else:
-                return render_template("login.html", error="Matrícula o contraseña incorrecta")
-        cursor.callproc("ver_docentes")
-        docente = None
-        for result in cursor.stored_results():
-            for row in result.fetchall():
-                if row['matricula'] == matricula:
-                    docente = row
-                    break
+            return render_template("login.html", error="Matrícula o contraseña incorrecta")
+
+        # --- DOCENTE: buscar por matrícula y validar ---
+        cursor.execute("SELECT * FROM docentes WHERE matricula = %s", (matricula,))
+        docente = cursor.fetchone()
         if docente:
-            # Validar contraseña del docente con su fecha de nacimiento en formato DDMMYY
+            stored_pw = docente.get('password')
+            if stored_pw:
+                if check_password_hash(stored_pw, password):
+                    session['tipo_usuario'] = 'docente'
+                    session['matricula'] = matricula
+                    session['id_docente'] = docente['id_docente']
+                    return redirect(url_for('profesor'))
+                else:
+                    return render_template("login.html", error="Matrícula o contraseña incorrecta")
+            # migración por fecha de nacimiento
             fecha_nac_doc = docente.get('fecha_nacimiento')
             if fecha_nac_doc:
                 try:
@@ -78,12 +122,15 @@ def login():
             else:
                 expected_doc = ""
             if password == expected_doc and expected_doc != "":
+                new_hash = generate_password_hash(password)
+                cursor.execute("UPDATE docentes SET password = %s WHERE id_docente = %s", (new_hash, docente['id_docente']))
+                db.commit()
                 session['tipo_usuario'] = 'docente'
                 session['matricula'] = matricula
                 session['id_docente'] = docente['id_docente']
                 return redirect(url_for('profesor'))
-            else:
-                return render_template("login.html", error="Matrícula o contraseña incorrecta")
+            return render_template("login.html", error="Matrícula o contraseña incorrecta")
+
         return render_template("login.html", error="Matrícula no encontrada")
     return render_template("login.html")
 
@@ -107,10 +154,10 @@ def index():
     # Verificar estado de evaluaciones docentes y de servicios
     cursor.execute("""
         SELECT 
-            (SELECT COUNT(*) FROM semestre s 
+            (SELECT COUNT(*) FROM materias_impartidas s 
              WHERE s.id_campus = %s AND s.numero = %s) as total_docentes,
             (SELECT COUNT(*) FROM evaluacion e 
-             JOIN semestre s ON e.id_semestre = s.id_semestre 
+             JOIN materias_impartidas s ON e.id_materia_impartida = s.id_materia_impartida 
              WHERE e.id_alumno = %s AND s.id_campus = %s AND s.numero = %s) as completadas_docentes,
             EXISTS(SELECT 1 FROM evaluacion_servicios WHERE id_alumno = %s) as servicios_completado
     """, (id_campus, numero_semestre, id_alumno, id_campus, numero_semestre, id_alumno))
@@ -130,12 +177,16 @@ def index():
     if estado['total_docentes'] == estado['completadas_docentes'] and estado['servicios_completado']:
         return render_template("finale.html")
 
-    # Obtener semestres disponibles para el alumno y que no hayan sido contestados
+    # Obtener semestres ya contestados por el alumno -> ahora id_materia_impartida
+    cursor.execute("SELECT id_materia_impartida FROM evaluacion WHERE id_alumno = %s", (id_alumno,))
+    semestres_contestados = {row['id_materia_impartida'] for row in cursor.fetchall()}
+
+    # Obtener materias_impartidas disponibles para el alumno y que no hayan sido contestadas
     cursor.execute("""
-        SELECT s.* FROM semestre s
+        SELECT s.* FROM materias_impartidas s
         WHERE s.id_campus = %s AND s.numero = %s
-        AND s.id_semestre NOT IN (
-            SELECT id_semestre FROM evaluacion WHERE id_alumno = %s
+        AND s.id_materia_impartida NOT IN (
+            SELECT id_materia_impartida FROM evaluacion WHERE id_alumno = %s
         )
     """, (id_campus, numero_semestre, id_alumno))
     semestres_disponibles = cursor.fetchall()
@@ -202,26 +253,25 @@ def semestres_por_docente(id_docente):
     alumno = cursor.fetchone()
     id_campus = alumno['id_campus'] if alumno else None
     numero_semestre = alumno['numero_semestre'] if alumno else None
-    # Obtener solo los semestres del docente que sean del mismo campus y mismo semestre
+    # Obtener solo los registros de materias_impartidas del docente que sean del mismo campus y mismo semestre
     cursor.execute("""
-        SELECT * FROM semestre WHERE id_docente = %s AND id_campus = %s AND numero = %s
+        SELECT * FROM materias_impartidas WHERE id_docente = %s AND id_campus = %s AND numero = %s
     """, (id_docente, id_campus, numero_semestre))
     semestres = cursor.fetchall()
-    # Obtener semestres ya contestados por el alumno
+    # Obtener materias ya contestadas por el alumno
     cursor.execute("""
-        SELECT id_semestre FROM evaluacion WHERE id_alumno = %s AND id_docente = %s
+        SELECT id_materia_impartida FROM evaluacion WHERE id_alumno = %s AND id_docente = %s
     """, (id_alumno, id_docente))
-    semestres_contestados = {row['id_semestre'] for row in cursor.fetchall()}
-    # Filtrar semestres no contestados
-    semestres_filtrados = [s for s in semestres if s['id_semestre'] not in semestres_contestados]
-    # Siempre devolver JSON para el fetch del frontend
+    semestres_contestados = {row['id_materia_impartida'] for row in cursor.fetchall()}
+    # Filtrar semestres no contestados (usar clave 'id_materia_impartida' en los dicts)
+    semestres_filtrados = [s for s in semestres if s['id_materia_impartida'] not in semestres_contestados]
     return jsonify(semestres_filtrados)
 
 # Ruta para mostrar la encuesta de evaluación
 @app.route("/encuesta", methods=["POST"])
 def encuesta():
     id_docente = request.form.get("id_docente")
-    id_semestre = request.form.get("id_semestre")
+    id_semestre = request.form.get("id_semestre")  # este valor corresponde a id_materia_impartida en BD
     id_alumno = session.get('id_alumno')
 
     # Validar que el semestre corresponde al docente, ambos son del mismo campus y mismo semestre que el alumno
@@ -230,7 +280,7 @@ def encuesta():
     id_campus = alumno['id_campus'] if alumno else None
     numero_semestre = alumno['numero_semestre'] if alumno else None
     cursor.execute("""
-        SELECT * FROM semestre WHERE id_semestre = %s AND id_docente = %s AND id_campus = %s AND numero = %s
+        SELECT * FROM materias_impartidas WHERE id_materia_impartida = %s AND id_docente = %s AND id_campus = %s AND numero = %s
     """, (id_semestre, id_docente, id_campus, numero_semestre))
     semestre = cursor.fetchone()
     if not semestre:
@@ -274,11 +324,12 @@ def guardar():
     # Si tenemos id_eval, obtener los ids asociados (por seguridad)
     if id_eval and id_eval.strip() != "":
         try:
-            cursor.execute("SELECT id_docente, id_semestre FROM evaluacion WHERE id_evaluacion = %s", (id_eval,))
+            cursor.execute("SELECT id_docente, id_materia_impartida FROM evaluacion WHERE id_evaluacion = %s", (id_eval,))
             ev = cursor.fetchone()
             if ev:
                 id_docente = id_docente or ev.get('id_docente')
-                id_semestre = id_semestre or ev.get('id_semestre')
+                # ev devuelve id_materia_impartida, mantenemos la variable id_semestre por compatibilidad de formularios
+                id_semestre = id_semestre or ev.get('id_materia_impartida')
         except Exception:
             pass
 
@@ -286,7 +337,7 @@ def guardar():
     if not id_eval or id_eval.strip() == "":
         if not id_docente or not id_semestre or not id_alumno:
             return "Datos insuficientes para registrar la evaluación.", 400
-        # Crear la evaluación ahora que el alumno envía respuestas
+        # Crear la evaluación (id_semestre contiene id_materia_impartida)
         cursor.callproc("registrar_evaluacion", (int(id_docente), int(id_semestre), int(id_alumno)))
         db.commit()
         cursor.execute("SELECT LAST_INSERT_ID() AS id_eval")
