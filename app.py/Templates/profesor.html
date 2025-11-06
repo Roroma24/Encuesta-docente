@@ -54,6 +54,206 @@ Descripción: Plantilla para mostrar el panel docente.
         .logout-link:hover {
             background: #a61717;
         }
+                .admin-container {
+            max-width: 95%;
+            margin: 20px auto;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-title {
+            color: #eb2525;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .stat-content {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .stat-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .stat-table th,
+        .stat-table td {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            color: #eb2525;
+            font-weight: bold;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .evaluation-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .evaluation-table th {
+            background: #eb2525;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .evaluation-table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        .status-asignacion {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+
+        .status-valoracion {
+            color: #f1c40f;
+            font-weight: bold;
+        }
+
+        .status-sin-asignacion {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .promedio-cell {
+            font-weight: bold;
+        }
+
+        .promedio-alto {
+            color: #2ecc71;
+        }
+
+        .promedio-medio {
+            color: #f1c40f;
+        }
+
+        .promedio-bajo {
+            color: #e74c3c;
+        }
+
+        /* Nuevos estilos para la separación de secciones */
+        .section-title {
+            text-align: center;
+            color: #eb2525;
+            font-size: 1.8em;
+            margin: 30px auto;
+            font-weight: bold;
+            text-transform: uppercase;
+            background: #ffffff;
+            padding: 15px 30px;
+            border-radius: 8px;
+            display: inline-block;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: relative;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* Modificar el estilo del título principal */
+        .admin-container h1 {
+            text-align: center;
+            color: #eb2525;
+            font-size: 2.2em;
+            margin: 30px auto;
+            font-weight: bold;
+            text-transform: uppercase;
+            background: #ffffff;
+            padding: 15px 30px;
+            border-radius: 8px;
+            display: inline-block;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: relative;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* tarjeta más grande para listas (ej. Alumnos Pendientes) */
+        .stat-card--large {
+            padding: 26px;
+            min-width: 820px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-card--large .stat-content {
+            max-height: 420px;
+            /* más alto para mostrar más filas antes del scroll */
+            overflow-y: auto;
+        }
+
+        /* leyenda de promedios */
+        .legend-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 0.98rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px dashed rgba(0, 0, 0, 0.04);
+        }
+
+        .legend-swatch {
+            width: 16px;
+            height: 12px;
+            border-radius: 3px;
+            display: inline-block;
+            flex-shrink: 0;
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+        }
+
+        .legend-high {
+            background: #2ecc71;
+        }
+
+        .legend-medium {
+            background: #f1c40f;
+        }
+
+        .legend-low {
+            background: #e74c3c;
+        }
+
+        /* pequeño ajuste para que las tablas dentro de cards grandes tengan texto legible */
+        .stat-card--large .stat-table td,
+        .stat-card--large .stat-table th,
+        .stat-card--large .evaluation-table td,
+        .stat-card--large .evaluation-table th {
+            font-size: 0.98rem;
+            padding: 10px;
+        }
     </style>
 </head>
 <body>
@@ -99,6 +299,24 @@ Descripción: Plantilla para mostrar el panel docente.
             </tr>
             {% endfor %}
         </table>
+
+         <div class="stat-card">
+                <div class="stat-title">Leyenda de Promedios</div>
+                <div class="stat-content">
+                    <p style="margin:0 0 10px 0; font-weight:600;">Evaluaciones Académicas</p>
+                    <ul class="legend-list">
+                        <li class="legend-item"><span class="legend-swatch legend-high"></span> Apartir de 4.0 en adelante es un "Muy buen profesor" || "Excelente profesor" 
+                        </li>
+                        <li class="legend-item"><span class="legend-swatch legend-medium"></span> Entre 2.0 a 3.9 — "Es un buen profesor" || "Es un profesor regular"
+                        </li>
+                        <li class="legend-item"><span class="legend-swatch legend-low"></span> &lt; Menor a 2.0— "Es un mal profesor" || "Necesita mejorar"
+                        </li>
+                    </ul>
+
+                    <hr style="margin:12px 0; border:none; border-top:1px solid #eee;">
+
+                </div>
+            </div>
 
         <!-- Enlace para cerrar sesión -->
         <a href="{{ url_for('logout') }}" class="logout-link">Cerrar sesión</a>

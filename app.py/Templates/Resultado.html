@@ -10,15 +10,22 @@ Descripción: Plantilla para mostrar el resultado de la encuesta.
     <title>Encuesta Finalizada</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
-<body>
-    <!-- Mensaje principal de confirmación de encuesta -->
-    <h1>✅ Gracias por completar la encuesta</h1>
+<body><!-- color de fondo para resaltar el contenedor blanco -->
+    
+    <!-- Contenedor blanco centrado -->
+    <div style="max-width:600px; margin:80px auto; background:#ffffff; padding:40px; border-radius:15px; box-shadow:0 0 15px rgba(0,0,0,0.1); text-align:center;">
+        
+        <!-- Mensaje principal de confirmación de encuesta -->
+        <h1>✅ Gracias por completar la encuesta</h1>
 
-    <!-- Contenedor centrado con botón para contestar otra encuesta -->
-    <div style="text-align:center; margin-top: 30px;">
-        <a href="/inicio" style="display:inline-block; padding:10px 20px; background:#ff0000; color:#fff; border-radius:5px; text-decoration:none; font-size:16px;">
-            Contestar otra encuesta
-        </a>
+        <!-- Contenedor centrado con botón para contestar otra encuesta -->
+        <div style="text-align:center; margin-top: 30px;">
+            <a href="/inicio" style="display:inline-block; padding:10px 20px; background:#ff0000; color:#fff; border-radius:5px; text-decoration:none; font-size:16px;">
+                Contestar otra encuesta
+            </a>
+        </div>
+
     </div>
+
 </body>
 </html>

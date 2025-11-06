@@ -37,7 +37,7 @@ Descripción: Plantilla para el panel administrativo.
         }
 
         .stat-content {
-            max-height: 300px;
+            max-height: 400px;
             overflow-y: auto;
         }
 
@@ -50,7 +50,7 @@ Descripción: Plantilla para el panel administrativo.
         .stat-table td {
             padding: 8px;
             border-bottom: 1px solid #eee;
-            text-align: left;
+            text-align: center;
         }
 
         .stat-number {
@@ -75,11 +75,13 @@ Descripción: Plantilla para el panel administrativo.
             background: #eb2525;
             color: white;
             padding: 10px;
+            text-align: center;
         }
 
         .evaluation-table td {
             padding: 8px;
             border: 1px solid #ddd;
+            text-align: center;
         }
 
         .status-asignacion {
@@ -111,6 +113,102 @@ Descripción: Plantilla para el panel administrativo.
 
         .promedio-bajo {
             color: #e74c3c;
+        }
+
+        /* Nuevos estilos para la separación de secciones */
+        .section-title {
+            text-align: center;
+            color: #eb2525;
+            font-size: 1.8em;
+            margin: 30px auto;
+            font-weight: bold;
+            text-transform: uppercase;
+            background: #ffffff;
+            padding: 15px 30px;
+            border-radius: 8px;
+            display: inline-block;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: relative;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* Modificar el estilo del título principal */
+        .admin-container h1 {
+            text-align: center;
+            color: #eb2525;
+            font-size: 2.2em;
+            margin: 30px auto;
+            font-weight: bold;
+            text-transform: uppercase;
+            background: #ffffff;
+            padding: 15px 30px;
+            border-radius: 8px;
+            display: inline-block;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: relative;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* tarjeta más grande para listas (ej. Alumnos Pendientes) */
+        .stat-card--large {
+            padding: 26px;
+            min-width: 820px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-card--large .stat-content {
+            max-height: 420px;
+            /* más alto para mostrar más filas antes del scroll */
+            overflow-y: auto;
+        }
+
+        /* leyenda de promedios */
+        .legend-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 0.98rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px dashed rgba(0, 0, 0, 0.04);
+        }
+
+        .legend-swatch {
+            width: 16px;
+            height: 12px;
+            border-radius: 3px;
+            display: inline-block;
+            flex-shrink: 0;
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+        }
+
+        .legend-high {
+            background: #2ecc71;
+        }
+
+        .legend-medium {
+            background: #f1c40f;
+        }
+
+        .legend-low {
+            background: #e74c3c;
+        }
+
+        /* pequeño ajuste para que las tablas dentro de cards grandes tengan texto legible */
+        .stat-card--large .stat-table td,
+        .stat-card--large .stat-table th,
+        .stat-card--large .evaluation-table td,
+        .stat-card--large .evaluation-table th {
+            font-size: 0.98rem;
+            padding: 10px;
         }
     </style>
 </head>
@@ -171,8 +269,35 @@ Descripción: Plantilla para el panel administrativo.
                 </div>
             </div>
 
-            <!-- Alumnos Pendientes -->
+            
+
+            <!-- Nueva tarjeta: Leyenda de Promedios -->
             <div class="stat-card">
+                <div class="stat-title">Leyenda de Promedios</div>
+                <div class="stat-content">
+                    <p style="margin:0 0 10px 0; font-weight:600;">Evaluaciones Académicas</p>
+                    <ul class="legend-list">
+                        <li class="legend-item"><span class="legend-swatch legend-high"></span> Mayor o igual a 4.5 — Excelente / Asignación de materias
+                        </li>
+                        <li class="legend-item"><span class="legend-swatch legend-medium"></span> Entre 3.0 – 4.49 — En valoración
+                        </li>
+                        <li class="legend-item"><span class="legend-swatch legend-low"></span> &lt; Menor a 3.0 — Sin asignación / Requiere mejora
+                        </li>
+                    </ul>
+
+                    <hr style="margin:12px 0; border:none; border-top:1px solid #eee;">
+
+                    <p style="margin:0 0 10px 0; font-weight:600;">Evaluaciones de Servicios</p>
+                    <ul class="legend-list">
+                        <li class="legend-item"><span class="legend-swatch legend-high"></span> Mayor o igual 4.5 — Excelente</li>
+                        <li class="legend-item"><span class="legend-swatch legend-medium"></span> Entre 3.5 – 4.49 — Satisfactorio</li>
+                        <li class="legend-item"><span class="legend-swatch legend-low"></span> &lt; Menor a 3.5 — Requiere Atención</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Alumnos Pendientes (TARJETA AGRANDADA) -->
+            <div class="stat-card stat-card--large">
                 <div class="stat-title">Alumnos Pendientes de Evaluar</div>
                 <div class="stat-content">
                     <table class="stat-table">
@@ -201,9 +326,11 @@ Descripción: Plantilla para el panel administrativo.
                     </table>
                 </div>
             </div>
+
         </div>
 
-        <!-- Evaluaciones de Docentes -->
+        <!-- Sección de Evaluaciones Docentes -->
+        <div class="section-title">Evaluaciones Académicas</div>
         <div class="stat-card">
             <div class="stat-title">Evaluaciones de Docentes</div>
             <div class="stat-content">
@@ -233,7 +360,8 @@ Descripción: Plantilla para el panel administrativo.
             </div>
         </div>
 
-        <!-- Evaluaciones de Servicios -->
+        <!-- Sección de Servicios -->
+        <div class="section-title">Evaluaciones de Servicios</div>
         <div class="stat-card">
             <div class="stat-title">Evaluaciones de Servicios Escolares</div>
             <div class="stat-content">
