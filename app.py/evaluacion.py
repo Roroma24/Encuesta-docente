@@ -16,7 +16,7 @@ app.secret_key = "supersecretkey"
 db = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="Saltamontes71#",
+    password="Ror@$2405",
     database="evaluacion_d"  
 )
 cursor = db.cursor(dictionary=True)
@@ -381,12 +381,6 @@ def admin():
     for result in cursor.stored_results():
         evaluaciones = result.fetchall()
     
-    # Obtener reporte de servicios
-    cursor.callproc("reporte_admin_servicios")
-    servicios = []
-    for result in cursor.stored_results():
-        servicios = result.fetchall()
-    
     # Obtener estadísticas 
     cursor.callproc("estadisticas_evaluacion")
     stats = {}
@@ -408,7 +402,30 @@ def admin():
         stats['sin_evaluar'] = []
         stats['alumnos_estado'] = []
 
-    return render_template("admin.html", evaluaciones=evaluaciones, servicios=servicios, stats=stats)
+    # Obtener reporte de maestros
+    maestros = []
+    try:
+        cursor.callproc("reporte_maestros_evaluados")
+        for res in cursor.stored_results():
+            maestros = res.fetchall()
+            break
+    except Exception:
+        maestros = []
+
+    # NUEVO: Obtener reporte de servicios
+    servicios = []
+    try:
+        cursor.callproc("reporte_admin_servicios")
+        for result in cursor.stored_results():
+            servicios = result.fetchall()
+    except Exception:
+        servicios = []
+
+    return render_template("admin.html", 
+                         evaluaciones=evaluaciones, 
+                         stats=stats, 
+                         maestros=maestros,
+                         servicios=servicios)
 
 # Soporte GET y POST para mostrar el formulario de servicios 
 @app.route("/encuesta_servicios", methods=["GET", "POST"])

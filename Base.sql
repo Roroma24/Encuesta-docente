@@ -570,6 +570,37 @@ END$$
 
 DELIMITER ;
 
+-- Procedimiento para reporte de maestros evaluados y no evaluados
+DELIMITER $$
+
+CREATE PROCEDURE reporte_maestros_evaluados()
+BEGIN
+    -- Maestros evaluados
+    SELECT 
+        d.id_docente,
+        CONCAT(d.nombre, ' ', d.apellidop, ' ', d.apellidom) AS nombre_docente,
+        COUNT(DISTINCT e.id_evaluacion) AS total_evaluaciones,
+        'Evaluado' AS estado
+    FROM docentes d
+    JOIN evaluacion e ON d.id_docente = e.id_docente
+    GROUP BY d.id_docente
+
+    UNION ALL
+
+    -- Maestros NO evaluados
+    SELECT 
+        d.id_docente,
+        CONCAT(d.nombre, ' ', d.apellidop, ' ', d.apellidom) AS nombre_docente,
+        0 AS total_evaluaciones,
+        'No evaluado' AS estado
+    FROM docentes d
+    LEFT JOIN evaluacion e ON d.id_docente = e.id_docente
+    WHERE e.id_evaluacion IS NULL
+    ORDER BY estado DESC, nombre_docente ASC;
+END$$
+
+DELIMITER ;
+
 -- Insertar campus
 INSERT INTO campus (nombre, direccion, telefono) VALUES
 ('Coyoacán - Tlalpan', 'Av. Insurgentes Sur 1760, Coyoacán, CDMX', '55-5689-1234'),
@@ -663,6 +694,7 @@ INSERT INTO docentes (matricula, nombre, apellidop, apellidom, correo, departame
 -- Monterrey Cumbres (prefijo 14)
 ('14D00001', 'Ana Laura', 'Hidalgo', 'Paz', 'analaura.hidalgo@uvm.mx', 'Sistemas', '1981-09-28', 14);
 
+-- Más docentes para Reforma (prefijo 01)
 CALL insertar_docente_con_campus('01D00005','Roberto','Salinas','Vega','roberto.salinas@uvm.mx','Física','1975-04-12',2, NULL);
 CALL insertar_docente_con_campus('01D00006','Laura','Gómez','Rivera','laura.gomez@uvm.mx','Química','1980-09-05',2, NULL);
 CALL insertar_docente_con_campus('01D00007','Daniel','Pérez','Ortiz','daniel.perez@uvm.mx','Matemáticas','1978-02-20',2, NULL);

@@ -151,7 +151,7 @@ Descripción: Plantilla para el panel administrativo.
             transform: translateX(-50%);
         }
 
-        /* tarjeta más grande para listas (ej. Alumnos Pendientes) */
+        /* tarjeta más grande para listas */
         .stat-card--large {
             padding: 26px;
             min-width: 820px;
@@ -269,9 +269,7 @@ Descripción: Plantilla para el panel administrativo.
                 </div>
             </div>
 
-            
-
-            <!-- Nueva tarjeta: Leyenda de Promedios -->
+            <!-- Tarjeta: Leyenda de Promedios -->
             <div class="stat-card">
                 <div class="stat-title">Leyenda de Promedios</div>
                 <div class="stat-content">
@@ -327,6 +325,33 @@ Descripción: Plantilla para el panel administrativo.
                 </div>
             </div>
 
+        </div> <!-- end .stats-grid -->
+
+        <!-- Maestros - Tarjeta en la fila de abajo -->
+        <div class="stat-card" style="margin-bottom:20px;">
+            <div class="stat-title">Maestros - Estado de Evaluación</div>
+            <div class="stat-content">
+                <table class="stat-table">
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Total Evaluaciones</th>
+                        <th>Estado</th>
+                    </tr>
+                    {% if maestros %}
+                        {% for m in maestros %}
+                        <tr>
+                            <td>{{ m.id_docente }}</td>
+                            <td>{{ m.nombre_docente }}</td>
+                            <td>{{ m.total_evaluaciones }}</td>
+                            <td>{{ m.estado }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="4">No hay datos de maestros disponibles.</td></tr>
+                    {% endif %}
+                </table>
+            </div>
         </div>
 
         <!-- Sección de Evaluaciones Docentes -->

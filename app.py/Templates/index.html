@@ -102,7 +102,7 @@ Descripción: Plantilla para la página principal de la encuesta docente.
                     document.getElementById('botonEncuestaDiv').style.display = 'block';
                     data.forEach(function(s) {
                         var option = document.createElement('option');
-                        // <-- CAMBIO: usar el id devuelto por el backend (id_materia_impartida)
+                        // <-- Usar el id devuelto por el backend (id_materia_impartida)
                         option.value = s.id_materia_impartida;
                         option.text = 'Semestre ' + s.numero + ' - ' + s.materia;
                         select.appendChild(option);
