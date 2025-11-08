@@ -16,7 +16,7 @@ app.secret_key = "supersecretkey"
 db = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="Ror@$2405",
+    password="Saltamontes71#",
     database="evaluacion_d"  
 )
 cursor = db.cursor(dictionary=True)

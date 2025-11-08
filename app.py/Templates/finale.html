@@ -8,6 +8,8 @@ caso de que el usuario ya haya completado todas las encuestas correspondientes.
 <html>
 
 <head>
+    <!-- Página final de la encuesta docente, en esta página se muestra un mensaje de agradecimiento
+     por haber contestado todas las encuestas -->
     <title>Encuesta Docente - Final</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styleslogout.css') }}">
 </head>
@@ -18,13 +20,16 @@ caso de que el usuario ya haya completado todas las encuestas correspondientes.
         <div style="text-align:center; margin-top:50px;">
             <h1>¡Gracias por completar todas las encuestas!</h1>
             <p>Has terminado todas las evaluaciones asignadas.</p>
+            <!-- Mensaje de finalización y gratificación al usuario -->
         </div>
         <div style="text-align:center; margin-top:50px;">
             <form action="{{ url_for('logout') }}" method="GET" style="display:inline;">
                 <button type="submit"
+                    
                     style="background-color:#eb2525; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">
                     Cerrar sesión
                 </button>
+                 <!-- Se añade un botón para volver al inicio  de sesión -->
             </form>
         </div>
     </div>
