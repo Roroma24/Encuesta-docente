@@ -166,6 +166,25 @@ CREATE TABLE admin_users (
     password VARCHAR(255) NULL
 );
 
+-- Tablas de resumen (Sirven para la actualización constante)
+CREATE TABLE IF NOT EXISTS resumen_docentes_vm (
+    id_docente INT PRIMARY KEY,
+    total_respuestas INT NOT NULL DEFAULT 0,
+    promedio DECIMAL(4,2) NOT NULL DEFAULT 0.00,
+    ultima_actualizacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_resumen_docentes_docentes_vm FOREIGN KEY (id_docente) REFERENCES docentes(id_docente)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS resumen_servicios_vm (
+    id_campus INT PRIMARY KEY,
+    total_respuestas INT NOT NULL DEFAULT 0,
+    promedio DECIMAL(4,2) NOT NULL DEFAULT 0.00,
+    ultima_actualizacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_resumen_servicios_campus_vm FOREIGN KEY (id_campus) REFERENCES campus(id_campus)
+) ENGINE=InnoDB;
+
 -- PROCEDIMIENTOS ALMACENADOS
 
 DELIMITER $$
@@ -504,6 +523,145 @@ BEGIN
     LEFT JOIN carreras ca ON a.id_carrera = ca.id_carrera;
 END$$
 
+-- Procedimiento para reporte de maestros evaluados y no evaluados
+DELIMITER $$
+
+CREATE PROCEDURE reporte_maestros_evaluados()
+BEGIN
+    -- Maestros evaluados
+    SELECT 
+        d.id_docente,
+        CONCAT(d.nombre, ' ', d.apellidop, ' ', d.apellidom) AS nombre_docente,
+        COUNT(DISTINCT e.id_evaluacion) AS total_evaluaciones,
+        'Evaluado' AS estado
+    FROM docentes d
+    JOIN evaluacion e ON d.id_docente = e.id_docente
+    GROUP BY d.id_docente
+
+    UNION ALL
+
+    -- Maestros NO evaluados
+    SELECT 
+        d.id_docente,
+        CONCAT(d.nombre, ' ', d.apellidop, ' ', d.apellidom) AS nombre_docente,
+        0 AS total_evaluaciones,
+        'No evaluado' AS estado
+    FROM docentes d
+    LEFT JOIN evaluacion e ON d.id_docente = e.id_docente
+    WHERE e.id_evaluacion IS NULL
+    ORDER BY estado DESC, nombre_docente ASC;
+END$$
+
+DELIMITER ;
+
+-- Procedimiento granular (actualiza los datos para 1 docente)
+DELIMITER $$
+CREATE PROCEDURE sp_vm_refrescar_docente_individual(IN p_id_docente INT)
+BEGIN
+    DECLARE v_total INT DEFAULT 0;
+    DECLARE v_prom DECIMAL(4,2) DEFAULT 0.00;
+
+    SELECT COUNT(r.id_respuesta), ROUND(AVG(CAST(r.escala AS UNSIGNED)),2)
+    INTO v_total, v_prom
+    FROM evaluacion e
+    JOIN respuestas r ON e.id_evaluacion = r.id_evaluacion
+    WHERE e.id_docente = p_id_docente;
+
+    IF v_total IS NULL OR v_total = 0 THEN
+        DELETE FROM resumen_docentes_vm WHERE id_docente = p_id_docente;
+    ELSE
+        INSERT INTO resumen_docentes_vm (id_docente, total_respuestas, promedio)
+        VALUES (p_id_docente, v_total, COALESCE(v_prom,0.00))
+        ON DUPLICATE KEY UPDATE
+            total_respuestas = VALUES(total_respuestas),
+            promedio = VALUES(promedio);
+    END IF;
+END$$
+DELIMITER ;
+
+-- Procedimiento granular para servicios por campus
+DELIMITER $$
+CREATE PROCEDURE sp_vm_refrescar_campus_servicio_individual(IN p_id_campus INT)
+BEGIN
+    DECLARE v_total INT DEFAULT 0;
+    DECLARE v_prom DECIMAL(4,2) DEFAULT 0.00;
+
+    SELECT COUNT(rs.id_respuesta), ROUND(AVG(CAST(rs.escala AS UNSIGNED)),2)
+    INTO v_total, v_prom
+    FROM evaluacion_servicios es
+    JOIN respuestas_servicios rs ON es.id_evaluacion_servicios = rs.id_evaluacion_servicios
+    WHERE es.id_campus = p_id_campus;
+
+    IF v_total IS NULL OR v_total = 0 THEN
+        DELETE FROM resumen_servicios_vm WHERE id_campus = p_id_campus;
+    ELSE
+        INSERT INTO resumen_servicios_vm (id_campus, total_respuestas, promedio)
+        VALUES (p_id_campus, v_total, COALESCE(v_prom,0.00))
+        ON DUPLICATE KEY UPDATE
+            total_respuestas = VALUES(total_respuestas),
+            promedio = VALUES(promedio);
+    END IF;
+END$$
+DELIMITER ;
+
+-- Procedimiento de refresco completo (reconcilia todo: docentes + servicios)
+DELIMITER $$
+CREATE PROCEDURE sp_vm_refrescar_resumen_completo()
+BEGIN
+    -- Docentes: resumen completo
+    DROP TEMPORARY TABLE IF EXISTS tmp_vm_doc;
+    CREATE TEMPORARY TABLE tmp_vm_doc AS
+    SELECT e.id_docente,
+           COUNT(r.id_respuesta) AS total_respuestas,
+           ROUND(AVG(CAST(r.escala AS UNSIGNED)),2) AS promedio
+    FROM evaluacion e
+    JOIN respuestas r ON e.id_evaluacion = r.id_evaluacion
+    GROUP BY e.id_docente;
+
+    INSERT INTO resumen_docentes_vm (id_docente, total_respuestas, promedio)
+    SELECT id_docente, total_respuestas, COALESCE(promedio,0.00) FROM tmp_vm_doc
+    ON DUPLICATE KEY UPDATE
+        total_respuestas = VALUES(total_respuestas),
+        promedio = VALUES(promedio);
+
+    DELETE rd FROM resumen_docentes_vm rd
+    LEFT JOIN tmp_vm_doc t ON rd.id_docente = t.id_docente
+    WHERE t.id_docente IS NULL;
+
+    DROP TEMPORARY TABLE IF EXISTS tmp_vm_doc;
+
+    -- Servicios: resumen completo por campus
+    DROP TEMPORARY TABLE IF EXISTS tmp_vm_serv;
+    CREATE TEMPORARY TABLE tmp_vm_serv AS
+    SELECT es.id_campus,
+           COUNT(rs.id_respuesta) AS total_respuestas,
+           ROUND(AVG(CAST(rs.escala AS UNSIGNED)),2) AS promedio
+    FROM evaluacion_servicios es
+    JOIN respuestas_servicios rs ON es.id_evaluacion_servicios = rs.id_evaluacion_servicios
+    GROUP BY es.id_campus;
+
+    INSERT INTO resumen_servicios_vm (id_campus, total_respuestas, promedio)
+    SELECT id_campus, total_respuestas, COALESCE(promedio,0.00) FROM tmp_vm_serv
+    ON DUPLICATE KEY UPDATE
+        total_respuestas = VALUES(total_respuestas),
+        promedio = VALUES(promedio);
+
+    DELETE rs FROM resumen_servicios_vm rs
+    LEFT JOIN tmp_vm_serv t ON rs.id_campus = t.id_campus
+    WHERE t.id_campus IS NULL;
+
+    DROP TEMPORARY TABLE IF EXISTS tmp_vm_serv;
+END$$
+DELIMITER ;
+
+-- Evento horario: refresca todo cada 1 HORA
+CREATE EVENT IF NOT EXISTS ev_vm_refrescar_resumen_hourly
+ON SCHEDULE EVERY 1 HOUR
+ON COMPLETION PRESERVE
+DO
+  CALL sp_vm_refrescar_resumen_completo();
+
+DELIMITER $$
 -- Trigger que registra el nuevo promedio cuando se inserta una respuesta
 CREATE TRIGGER trg_actualizar_historial_evaluacion 
 AFTER INSERT ON respuestas
@@ -530,6 +688,9 @@ BEGIN
     -- Insertar el registro en el historial
     INSERT INTO historial_evaluacion (id_docente, promedio, total_evaluaciones)
     VALUES (v_id_docente, v_promedio, v_total_evaluaciones);
+
+    -- Actualizar resumen del docente (llama al procedimiento granular)
+    CALL sp_vm_refrescar_docente_individual(v_id_docente);
 END$$
 
 -- Trigger que registra el comentario en el historial cuando se inserta un nuevo comentario
@@ -568,37 +729,21 @@ BEGIN
     );
 END$$
 
-DELIMITER ;
-
--- Procedimiento para reporte de maestros evaluados y no evaluados
-DELIMITER $$
-
-CREATE PROCEDURE reporte_maestros_evaluados()
+-- Trigger que actualiza resumen de servicios por campus cuando se inserta una respuesta de servicio
+CREATE TRIGGER trg_refrescar_resumen_servicios
+AFTER INSERT ON respuestas_servicios
+FOR EACH ROW
 BEGIN
-    -- Maestros evaluados
-    SELECT 
-        d.id_docente,
-        CONCAT(d.nombre, ' ', d.apellidop, ' ', d.apellidom) AS nombre_docente,
-        COUNT(DISTINCT e.id_evaluacion) AS total_evaluaciones,
-        'Evaluado' AS estado
-    FROM docentes d
-    JOIN evaluacion e ON d.id_docente = e.id_docente
-    GROUP BY d.id_docente
+    DECLARE v_id_campus INT;
 
-    UNION ALL
+    -- Obtener el id_campus de la evaluación de servicios
+    SELECT es.id_campus INTO v_id_campus
+    FROM evaluacion_servicios es
+    WHERE es.id_evaluacion_servicios = NEW.id_evaluacion_servicios;
 
-    -- Maestros NO evaluados
-    SELECT 
-        d.id_docente,
-        CONCAT(d.nombre, ' ', d.apellidop, ' ', d.apellidom) AS nombre_docente,
-        0 AS total_evaluaciones,
-        'No evaluado' AS estado
-    FROM docentes d
-    LEFT JOIN evaluacion e ON d.id_docente = e.id_docente
-    WHERE e.id_evaluacion IS NULL
-    ORDER BY estado DESC, nombre_docente ASC;
+    -- Actualizar resumen por campus (llama al procedimiento granular)
+    CALL sp_vm_refrescar_campus_servicio_individual(v_id_campus);
 END$$
-
 DELIMITER ;
 
 -- Insertar campus
@@ -756,3 +901,16 @@ CALL ver_respuestas();
 CALL ver_comentarios();
 CALL ver_evaluacion_servicios();
 CALL ver_respuestas_servicios();
+
+-- Pruebas
+/***
+SELECT @@event_scheduler AS event_scheduler;
+
+ALTER EVENT ev_vm_refrescar_resumen_hourly
+ON SCHEDULE EVERY 1 MINUTE;
+
+SELECT EVENT_NAME, STATUS, LAST_EXECUTED
+FROM information_schema.EVENTS
+WHERE EVENT_SCHEMA = 'evaluacion_d'
+  AND EVENT_NAME = 'ev_vm_refrescar_resumen_hourly';
+  ***/
