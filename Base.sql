@@ -84,6 +84,7 @@ CREATE TABLE alumnos (
     numero_semestre ENUM('1','2','3','4','5','6','7','8','9') NULL,
     fecha_nacimiento DATE NULL,
     password VARCHAR(255) NULL,
+    tipo_alumno ENUM('regular', 'intercambio') NOT NULL DEFAULT 'regular',
     FOREIGN KEY (id_campus) REFERENCES campus(id_campus),
     FOREIGN KEY (id_carrera) REFERENCES carreras(id_carrera)
 );
@@ -238,16 +239,21 @@ CREATE PROCEDURE insertar_alumno_con_vinculos(
     IN p_id_carrera INT,
     IN p_numero_semestre ENUM('1','2','3','4','5','6','7','8','9'),
     IN p_fecha_nacimiento DATE,
-    IN p_password VARCHAR(255)
+    IN p_password VARCHAR(255),
+    IN p_tipo_alumno ENUM('regular', 'intercambio')
 )
 BEGIN
+	IF p_tipo_alumno IS NULL THEN
+		SET p_tipo_alumno = 'regular';
+    END IF;
+
     IF p_id_campus IS NOT NULL AND p_id_carrera IS NOT NULL THEN
         IF NOT EXISTS (SELECT 1 FROM campus_carrera cc WHERE cc.campus_id = p_id_campus AND cc.carrera_id = p_id_carrera) THEN
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'La carrera no está disponible en el campus seleccionado (proc insertar_alumno_con_vinculos).';
         END IF;
     END IF;
-    INSERT INTO alumnos (matricula, nombre, apellidop, apellidom, correo, id_campus, id_carrera, numero_semestre, fecha_nacimiento, password)
-    VALUES (p_matricula, p_nombre, p_apellidop, p_apellidom, p_correo, p_id_campus, p_id_carrera, p_numero_semestre, p_fecha_nacimiento, p_password);
+    INSERT INTO alumnos (matricula, nombre, apellidop, apellidom, correo, id_campus, id_carrera, numero_semestre, fecha_nacimiento, password, tipo_alumno)
+    VALUES (p_matricula, p_nombre, p_apellidop, p_apellidom, p_correo, p_id_campus, p_id_carrera, p_numero_semestre, p_fecha_nacimiento, p_password, p_tipo_alumno);
 END$$
 
 -- Procedimientos de consulta 
@@ -766,7 +772,12 @@ INSERT INTO campus (nombre, direccion, telefono) VALUES
 ('Toluca', 'Blvd. Aeropuerto 50, Toluca, Edo. de México', '722-123-6789'),
 ('Querétaro', 'Av. Universidad 455, Querétaro, Qro.', '442-555-6060'),
 ('Hermosillo', 'Av. Kino 1500, Hermosillo, Son.', '662-555-7070'),
-('Ciudad Victoria', 'Av. Hidalgo 210, Ciudad Victoria, Tamps.', '834-555-8080');
+('Ciudad Victoria', 'Av. Hidalgo 210, Ciudad Victoria, Tamps.', '834-555-8080'),
+('Toronto - Canadá', 'University Ave 27, Toronto, ON M5J 1A1, Canada', '+1-416-978-0000'),
+('Madrid - España', 'Calle Serrano 123, Madrid, 28006, Spain', '+34-91-123-4567'),
+('Sao Paulo - Brasil', 'Avenida Paulista 1000, Sao Paulo, SP 01311-100, Brazil', '+55-11-3333-4444'),
+('Sydney - Australia', 'University Avenue 10, Camperdown, NSW 2006, Australia', '+61-2-9351-0000'),
+('Tokyo - Japón', 'Hongo 7-3-1, Bunkyo City, Tokyo 113-0033, Japan', '+81-3-3812-2111');
 
 -- Insertar carreras
 INSERT INTO carreras (clave, nombre, duracion_semestres) VALUES
@@ -808,7 +819,17 @@ INSERT INTO campus_carrera (campus_id, carrera_id, fecha_inicio) VALUES
 (16, 2, '2020-02-01'), -- Toluca - Ingeniería Industrial
 (17, 3, '2021-03-01'), -- Querétaro - Lic. Administración
 (18, 5, '2022-04-01'), -- Hermosillo - Ingeniería Eléctrica
-(19, 4, '2021-05-01'); -- Ciudad Victoria - Lic. Psicología
+(19, 4, '2021-05-01'), -- Ciudad Victoria - Lic. Psicología
+(20, 1, '2024-01-15'), -- Toronto - Ingeniería en Sistemas
+(20, 3, '2024-01-15'), -- Toronto - Lic. Administración
+(21, 2, '2024-02-01'), -- Madrid - Ingeniería Industrial
+(21, 4, '2024-02-01'), -- Madrid - Lic. Psicología
+(22, 1, '2024-03-01'), -- Sao Paulo - Ingeniería en Sistemas
+(22, 6, '2024-03-01'), -- Sao Paulo - Ingeniería Mecánica
+(23, 5, '2024-04-01'), -- Sydney - Ingeniería Eléctrica
+(23, 3, '2024-04-01'), -- Sydney - Lic. Administración
+(24, 1, '2024-05-01'), -- Tokyo - Ingeniería en Sistemas
+(24, 8, '2024-05-01'); -- Tokyo - Lic. Mercadotecnia
 
 -- Insertar docentes 
 INSERT INTO docentes (matricula, nombre, apellidop, apellidom, correo, departamento, fecha_nacimiento, id_campus) VALUES
@@ -870,27 +891,91 @@ CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matri
 CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula = '01D00008'), '1', 'Empatía para resolver', 'EM-101', '2025-01-15', '2025-05-30', 2, 1);
 
 -- Insertar alumnos vinculados a campus y carrera 
-CALL insertar_alumno_con_vinculos('01A00001', 'Santiago', 'Vargas', 'Lara', 'santiago.vargas@uvmnet.edu', 2, 1, '3', '2003-02-14', NULL);
-CALL insertar_alumno_con_vinculos('01A00002', 'Camila', 'Gómez', 'Ruiz', 'camila.gomez@uvmnet.edu', 2, 2, '5', '2002-06-01', NULL);
-CALL insertar_alumno_con_vinculos('02A00001', 'Diego', 'Molina', 'Paz', 'diego.molina@uvmnet.edu', 1, 3, '4', '2004-01-20', NULL);
-CALL insertar_alumno_con_vinculos('02A00002', 'Karina', 'Soto', 'Vázquez', 'karina.soto@uvmnet.edu', 1, 1, '2', '2003-09-09', NULL);
-CALL insertar_alumno_con_vinculos('03A00001', 'Andrés', 'Reyes', 'Ortiz', 'andres.reyes@uvmnet.edu', 3, 1, '6', '2001-12-12', NULL);
-CALL insertar_alumno_con_vinculos('04A00001', 'María José', 'Ponce', 'Guerra', 'mariajose.ponce@uvmnet.edu', 4, 5, '7', '2000-07-07', NULL);
-CALL insertar_alumno_con_vinculos('07A00001', 'Jorge', 'Medina', 'Silva', 'jorge.medina@uvmnet.edu', 7, 6, '4', '2002-11-11', NULL);
-CALL insertar_alumno_con_vinculos('08A00001', 'Valeria', 'Ramírez', 'Lopez', 'valeria.ramirez@uvmnet.edu', 8, 1, '3', '2003-03-03', NULL);
-CALL insertar_alumno_con_vinculos('10A00001', 'Pablo', 'Santos', 'Hernández', 'pablo.santos@uvmnet.edu', 10, 4, '2', '2004-10-10', NULL);
-CALL insertar_alumno_con_vinculos('16A00001', 'Andrea', 'Cervantes', 'Núñez', 'andrea.cervantes@uvmnet.edu', 16, 2, '5', '2001-05-05', NULL);
-CALL insertar_alumno_con_vinculos('01A00003', 'Mariana', 'López', 'Ramos', 'mariana.lopez@uvmnet.edu', 2, 1, '3', '2003-07-18', NULL);
-CALL insertar_alumno_con_vinculos('01A00004', 'Diego', 'Fernández', 'Ruiz', 'diego.fernandez@uvmnet.edu', 2, 1, '3', '2003-11-02', NULL);
-CALL insertar_alumno_con_vinculos('01A00005', 'Sofía', 'Vega', 'Martínez', 'sofia.vega@uvmnet.edu', 2, 1, '3', '2003-05-12', NULL);
-CALL insertar_alumno_con_vinculos('17A00001', 'Luis', 'Beltrán', 'Ramos', 'luis.beltran@uvmnet.edu', 17, 3, '1', '2004-04-04', NULL);
-CALL insertar_alumno_con_vinculos('14A00001', 'Sergio', 'Duarte', 'Mora', 'sergio.duarte@uvmnet.edu', 14, 1, '8', '1999-12-01', NULL);
-CALL insertar_alumno_con_vinculos('01A00006', 'Georgina Wendy', 'Mondragón', 'Vázquez', 'georgina.mondragon@uvmnet.edu', 2, 1, '1', '2006-03-10', NULL);
-CALL insertar_alumno_con_vinculos('01A00007', 'Brenda Sofía', 'Hernández', 'López', 'brenda.hernandez@uvmnet.edu', 2, 1, '1', '2006-04-05', NULL);
-CALL insertar_alumno_con_vinculos('01A00008', 'Juan Carlos', 'Ruiz', 'Martínez', 'juan.carlos.ruiz@uvmnet.edu', 2, 1, '1', '2006-02-20', NULL);
+CALL insertar_alumno_con_vinculos('01A00001', 'Santiago', 'Vargas', 'Lara', 'santiago.vargas@uvmnet.edu', 2, 1, '3', '2003-02-14', NULL, 'regular');
+CALL insertar_alumno_con_vinculos('01A00002', 'Camila', 'Gómez', 'Ruiz', 'camila.gomez@uvmnet.edu', 2, 2, '5', '2002-06-01', NULL, 'regular');
+CALL insertar_alumno_con_vinculos('02A00001', 'Diego', 'Molina', 'Paz', 'diego.molina@uvmnet.edu', 1, 3, '4', '2004-01-20', NULL, 'regular');
+CALL insertar_alumno_con_vinculos('02A00002', 'Karina', 'Soto', 'Vázquez', 'karina.soto@uvmnet.edu', 1, 1, '2', '2003-09-09', NULL, 'regular');
+CALL insertar_alumno_con_vinculos('03A00001', 'Andrés', 'Reyes', 'Ortiz', 'andres.reyes@uvmnet.edu', 3, 1, '6', '2001-12-12', NULL, 'regular');
+CALL insertar_alumno_con_vinculos('04A00001', 'María José', 'Ponce', 'Guerra', 'mariajose.ponce@uvmnet.edu', 4, 5, '7', '2000-07-07', NULL, 'regular');
+CALL insertar_alumno_con_vinculos('07A00001', 'Jorge', 'Medina', 'Silva', 'jorge.medina@uvmnet.edu', 7, 6, '4', '2002-11-11', NULL, 'regular');
+CALL insertar_alumno_con_vinculos('08A00001', 'Valeria', 'Ramírez', 'Lopez', 'valeria.ramirez@uvmnet.edu', 8, 1, '3', '2003-03-03', NULL, 'regular');
+CALL insertar_alumno_con_vinculos('10A00001', 'Pablo', 'Santos', 'Hernández', 'pablo.santos@uvmnet.edu', 10, 4, '2', '2004-10-10', NULL, 'regular');
+CALL insertar_alumno_con_vinculos('16A00001', 'Andrea', 'Cervantes', 'Núñez', 'andrea.cervantes@uvmnet.edu', 16, 2, '5', '2001-05-05', NULL, 'regular');
+CALL insertar_alumno_con_vinculos('01A00003', 'Mariana', 'López', 'Ramos', 'mariana.lopez@uvmnet.edu', 2, 1, '3', '2003-07-18', NULL, 'regular');
+CALL insertar_alumno_con_vinculos('01A00004', 'Diego', 'Fernández', 'Ruiz', 'diego.fernandez@uvmnet.edu', 2, 1, '3', '2003-11-02', NULL, 'regular');
+CALL insertar_alumno_con_vinculos('01A00005', 'Sofía', 'Vega', 'Martínez', 'sofia.vega@uvmnet.edu', 2, 1, '3', '2003-05-12', NULL, 'regular');
+CALL insertar_alumno_con_vinculos('17A00001', 'Luis', 'Beltrán', 'Ramos', 'luis.beltran@uvmnet.edu', 17, 3, '1', '2004-04-04', NULL, 'regular');
+CALL insertar_alumno_con_vinculos('14A00001', 'Sergio', 'Duarte', 'Mora', 'sergio.duarte@uvmnet.edu', 14, 1, '8', '1999-12-01', NULL, 'regular');
+CALL insertar_alumno_con_vinculos('01A00006', 'Georgina Wendy', 'Mondragón', 'Vázquez', 'georgina.mondragon@uvmnet.edu', 2, 1, '1', '2006-03-10', NULL, 'regular');
+CALL insertar_alumno_con_vinculos('01A00007', 'Brenda Sofía', 'Hernández', 'López', 'brenda.hernandez@uvmnet.edu', 2, 1, '1', '2006-04-05', NULL, 'regular');
+CALL insertar_alumno_con_vinculos('01A00008', 'Juan Carlos', 'Ruiz', 'Martínez', 'juan.carlos.ruiz@uvmnet.edu', 2, 1, '1', '2006-02-20', NULL, 'regular');
 
 -- Insertar admin 
 INSERT INTO admin_users (username, password) VALUES ('admin', NULL) ON DUPLICATE KEY UPDATE username=username;
+
+-- Insertar docentes para campus de intercambio
+-- Toronto (prefijo 20)
+CALL insertar_docente_con_campus('20D00001', 'Robert', 'Mitchell', 'Thompson', 'robert.mitchell@uvm.mx', 'Sistemas', '1980-03-15', 20, NULL);
+CALL insertar_docente_con_campus('20D00002', 'Jennifer', 'Taylor', 'Anderson', 'jennifer.taylor@uvm.mx', 'Administración', '1985-07-22', 20, NULL);
+
+-- Madrid (prefijo 21)
+CALL insertar_docente_con_campus('21D00001', 'Juan Carlos', 'García', 'Rodríguez', 'juancarlos.garcia@uvm.mx', 'Industrial', '1978-11-05', 21, NULL);
+CALL insertar_docente_con_campus('21D00002', 'María', 'López', 'Fernández', 'maria.lopez@uvm.mx', 'Psicología', '1982-09-18', 21, NULL);
+
+-- Sao Paulo (prefijo 22)
+CALL insertar_docente_con_campus('22D00001', 'Paulo', 'Silva', 'Santos', 'paulo.silva@uvm.mx', 'Sistemas', '1979-02-28', 22, NULL);
+CALL insertar_docente_con_campus('22D00002', 'Beatriz', 'Oliveira', 'Souza', 'beatriz.oliveira@uvm.mx', 'Mecánica', '1984-06-10', 22, NULL);
+
+-- Sydney (prefijo 23)
+CALL insertar_docente_con_campus('23D00001', 'David', 'Johnson', 'Williams', 'david.johnson@uvm.mx', 'Eléctrica', '1976-12-01', 23, NULL);
+CALL insertar_docente_con_campus('23D00002', 'Sarah', 'Brown', 'Davis', 'sarah.brown@uvm.mx', 'Administración', '1983-04-14', 23, NULL);
+
+-- Tokyo (prefijo 24)
+CALL insertar_docente_con_campus('24D00001', 'Takeshi', 'Yamamoto', 'Tanaka', 'takeshi.yamamoto@uvm.mx', 'Sistemas', '1981-08-20', 24, NULL);
+CALL insertar_docente_con_campus('24D00002', 'Yumiko', 'Sato', 'Nakamura', 'yumiko.sato@uvm.mx', 'Mercadotecnia', '1986-01-11', 24, NULL);
+
+-- Insertar semestres para docentes de intercambio
+-- Toronto
+CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula='20D00001'), '3', 'Advanced Systems', 'SYS-301', '2025-01-15', '2025-05-30', 20, 1);
+CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula='20D00002'), '4', 'Business Management', 'BUS-401', '2025-01-15', '2025-05-30', 20, 3);
+
+-- Madrid
+CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula='21D00001'), '5', 'Ingeniería de Procesos', 'ING-501', '2025-01-15', '2025-05-30', 21, 2);
+CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula='21D00002'), '2', 'Teoría Psicológica', 'PSI-201', '2025-01-15', '2025-05-30', 21, 4);
+
+-- Sao Paulo
+CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula='22D00001'), '4', 'Desenvolvimento de Software', 'DEV-401', '2025-01-15', '2025-05-30', 22, 1);
+CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula='22D00002'), '5', 'Engenharia Mecânica Avançada', 'MEC-501', '2025-01-15', '2025-05-30', 22, 6);
+
+-- Sydney
+CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula='23D00001'), '7', 'Power Systems Engineering', 'PWR-701', '2025-01-15', '2025-05-30', 23, 5);
+CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula='23D00002'), '3', 'Strategic Management', 'STR-301', '2025-01-15', '2025-05-30', 23, 3);
+
+-- Tokyo
+CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula='24D00001'), '5', 'コンピュータシステム', 'COMP-501', '2025-01-15', '2025-05-30', 24, 1);
+CALL insertar_semestre_con_vinculos((SELECT id_docente FROM docentes WHERE matricula='24D00002'), '4', 'デジタルマーケティング', 'MKTG-401', '2025-01-15', '2025-05-30', 24, 8);
+
+-- Insertar 20 alumnos de intercambio
+CALL insertar_alumno_con_vinculos('INT20001', 'Emma', 'Johnson', 'Smith', 'emma.johnson@uvmnet.edu', 20, 1, '3', '2002-03-15', NULL, 'intercambio');
+CALL insertar_alumno_con_vinculos('INT20002', 'James', 'Wilson', 'Brown', 'james.wilson@uvmnet.edu', 20, 1, '3', '2002-07-22', NULL, 'intercambio');
+CALL insertar_alumno_con_vinculos('INT20003', 'Olivia', 'Davis', 'Miller', 'olivia.davis@uvmnet.edu', 20, 3, '4', '2001-11-10', NULL, 'intercambio');
+CALL insertar_alumno_con_vinculos('INT20004', 'Masashi', 'Nakamura', 'Hashimoto', 'masashi.nakamura@uvmnet.edu', 20, 3, '5', '2001-05-30', NULL, 'intercambio');
+CALL insertar_alumno_con_vinculos('INT21001', 'Lucas', 'Garcia', 'Rodriguez', 'lucas.garcia@uvmnet.edu', 21, 2, '5', '2001-01-05', NULL, 'intercambio');
+CALL insertar_alumno_con_vinculos('INT21002', 'Sofia', 'Martinez', 'Gonzalez', 'sofia.martinez@uvmnet.edu', 21, 4, '2', '2003-08-18', NULL, 'intercambio');
+CALL insertar_alumno_con_vinculos('INT21003', 'Miguel', 'Hernandez', 'Lopez', 'miguel.hernandez@uvmnet.edu', 21, 2, '3', '2002-04-25', NULL, 'intercambio');
+CALL insertar_alumno_con_vinculos('INT22001', 'Isabella', 'Perez', 'Sanchez', 'isabella.perez@uvmnet.edu', 22, 1, '4', '2001-06-12', NULL, 'intercambio');
+CALL insertar_alumno_con_vinculos('INT22002', 'Carlos', 'Fernandez', 'Torres', 'carlos.fernandez@uvmnet.edu', 22, 6, '5', '2000-12-30', NULL, 'intercambio');
+CALL insertar_alumno_con_vinculos('INT22003', 'Andrea', 'Ramirez', 'Flores', 'andrea.ramirez@uvmnet.edu', 22, 1, '6', '2001-02-14', NULL, 'intercambio');
+CALL insertar_alumno_con_vinculos('INT22004', 'Diego', 'Castillo', 'Ruiz', 'diego.castillo@uvmnet.edu', 22, 6, '4', '2002-09-28', NULL, 'intercambio');
+CALL insertar_alumno_con_vinculos('INT23001', 'Lucia', 'Moreno', 'Vargas', 'lucia.moreno@uvmnet.edu', 23, 5, '7', '2000-05-19', NULL, 'intercambio');
+CALL insertar_alumno_con_vinculos('INT23002', 'Antonio', 'Jimenez', 'Gutierrez', 'antonio.jimenez@uvmnet.edu', 23, 3, '3', '2003-01-08', NULL, 'intercambio');
+CALL insertar_alumno_con_vinculos('INT23003', 'Valentina', 'Romero', 'Mendoza', 'valentina.romero@uvmnet.edu', 23, 5, '6', '2001-10-11', NULL, 'intercambio');
+CALL insertar_alumno_con_vinculos('INT23004', 'Fernando', 'Ortiz', 'Navarro', 'fernando.ortiz@uvmnet.edu', 23, 3, '4', '2002-08-03', NULL, 'intercambio');
+CALL insertar_alumno_con_vinculos('INT24001', 'Camila', 'Silva', 'Soto', 'camila.silva@uvmnet.edu', 24, 1, '5', '2001-04-21', NULL, 'intercambio');
+CALL insertar_alumno_con_vinculos('INT24002', 'Kenji', 'Tanaka', 'Yamamoto', 'kenji.tanaka@uvmnet.edu', 24, 1, '3', '2002-11-07', NULL, 'intercambio');
+CALL insertar_alumno_con_vinculos('INT24003', 'Yuki', 'Suzuki', 'Nakamura', 'yuki.suzuki@uvmnet.edu', 24, 8, '4', '2002-03-16', NULL, 'intercambio');
+CALL insertar_alumno_con_vinculos('INT24004', 'Hiroshi', 'Sato', 'Kobayashi', 'hiroshi.sato@uvmnet.edu', 24, 1, '6', '2000-09-24', NULL, 'intercambio');
+CALL insertar_alumno_con_vinculos('INT24005', 'Sakura', 'Ito', 'Watanabe', 'sakura.ito@uvmnet.edu', 24, 8, '2', '2003-07-13', NULL, 'intercambio');
 
 -- Consultas directas
 CALL ver_docentes();
