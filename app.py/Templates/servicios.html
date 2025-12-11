@@ -261,19 +261,20 @@ Descripción: Plantilla para la evaluación de servicios universitarios.
         <div class="pregunta-block">
             <p><strong>{{ loop.index }}. {{ p }}</strong></p>
             <input type="hidden" name="pregunta_{{ loop.index }}" value="{{ p }}" />
+            <!-- Escala de calificación -->
             <div class="escala-grid">
                 <span class="escala-num">1</span>
                 <span class="escala-num">2</span>
                 <span class="escala-num">3</span>
                 <span class="escala-num">4</span>
                 <span class="escala-num">5</span>
-
+                <!-- Slider para seleccionar la calificación -->
                 <div class="escala-slider-cell">
                     <input type="range" class="red-range" name="escala_{{ loop.index }}" min="1" max="5" value="3"
                         required oninput="document.getElementById('val_{{ loop.index }}').innerText = this.value;" />
                     <span class="range-label" id="val_{{ loop.index }}">3</span>
                 </div>
-
+                <!-- Etiquetas descriptivas de la escala -->
                 <span class="escala-etiqueta">Deficiente</span>
                 <span class="escala-etiqueta">Regular</span>
                 <span class="escala-etiqueta">Bueno</span>
