@@ -1195,7 +1195,16 @@ CALL ver_evaluaciones();
 CALL ver_respuestas();
 CALL ver_comentarios();
 CALL ver_evaluacion_servicios();
+
+-- Consultas de reportes de Back-end
+/***
+CALL estadisticas_evaluacion();
+CALL reporte_maestros_evaluados();
 CALL ver_respuestas_servicios();
+CALL reporte_admin_evaluacion();
+CALL reporte_admin_servicios();
+SELECT fn_reporte_evaluacion(16);
+***/
 
 -- Pruebas
 /***
