@@ -5,6 +5,9 @@ Descripción: Archivo principal de la aplicación Flask para la evaluación doce
 
 # Importación de librerías y configuración de la app Flask
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+import os
+import smtplib
+from email.message import EmailMessage
 import mysql.connector
 import json
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -374,6 +377,7 @@ def logout():
 def admin():
     if session.get('tipo_usuario') != 'admin':
         return redirect(url_for('login'))
+    mail_sent = request.args.get('mail_sent')
     
     # Obtener reporte de evaluaciones
     cursor.callproc("reporte_admin_evaluacion")
@@ -425,7 +429,151 @@ def admin():
                          evaluaciones=evaluaciones, 
                          stats=stats, 
                          maestros=maestros,
-                         servicios=servicios)
+                         servicios=servicios,
+                         mail_sent=mail_sent)
+
+
+@app.route('/admin/enviar_reportes', methods=['POST'])
+def enviar_reportes():
+    if session.get('tipo_usuario') != 'admin':
+        return redirect(url_for('login'))
+
+    recipients_raw = request.form.get('recipients', '').strip()
+    recipients = [r.strip() for r in recipients_raw.split(',') if r.strip()]
+    if not recipients:
+        # intentar usar correo del admin en la tabla si existe
+        try:
+            cursor.execute("SELECT correo FROM admin_users WHERE username = %s", ("admin",))
+            row = cursor.fetchone()
+            if row:
+                recipients = [row[0]]
+        except Exception:
+            recipients = []
+
+    if not recipients:
+        return redirect(url_for('admin', mail_sent='no_recipients'))
+
+    # Recolectar los mismos datos que la vista admin
+    try:
+        cursor.callproc("reporte_admin_evaluacion")
+        evaluaciones = []
+        for result in cursor.stored_results():
+            evaluaciones = result.fetchall()
+
+        cursor.callproc("estadisticas_evaluacion")
+        stats = {}
+        results = list(cursor.stored_results())
+        if len(results) >= 6:
+            row0 = results[0].fetchone()
+            stats['total_campus'] = row0.get('total_campus') if row0 else None
+            row1 = results[1].fetchone()
+            stats['total_alumnos'] = row1.get('total_alumnos') if row1 else None
+            stats['por_campus'] = results[2].fetchall()
+            stats['por_carrera'] = results[3].fetchall()
+            stats['sin_evaluar'] = results[4].fetchall()
+            stats['alumnos_estado'] = results[5].fetchall()
+        else:
+            stats = {'total_campus':None,'total_alumnos':None,'por_campus':[],'por_carrera':[],'sin_evaluar':[],'alumnos_estado':[]}
+
+        maestros = []
+        try:
+            cursor.callproc("reporte_maestros_evaluados")
+            for res in cursor.stored_results():
+                maestros = res.fetchall()
+                break
+        except Exception:
+            maestros = []
+
+        servicios = []
+        try:
+            cursor.callproc("reporte_admin_servicios")
+            for result in cursor.stored_results():
+                servicios = result.fetchall()
+        except Exception:
+            servicios = []
+
+    except Exception as e:
+        print("ERROR SMTP REAL >>>", repr(e))
+        return redirect(url_for('admin', mail_sent='error'))
+
+    # Construir contenido del correo
+    html = "<h2>Reporte de Evaluación Docente</h2>"
+
+    # Filtrar solo alumnos con pendientes 
+    alumnos_pendientes = []
+    if stats.get('alumnos_estado'):
+        for a in stats['alumnos_estado']:
+            try:
+                pend = int(a.get('pendientes') or 0)
+            except Exception:
+                try:
+                    pend = int(str(a.get('pendientes') or '0').strip())
+                except Exception:
+                    pend = 0
+            if pend > 0:
+                alumnos_pendientes.append(a)
+
+    if alumnos_pendientes:
+        html += "<h3>Alumnos pendientes</h3><table border='1' cellpadding='4' cellspacing='0'><tr><th>Matrícula</th><th>Nombre</th><th>Correo</th><th>Campus</th><th>Carrera</th><th>Requeridas</th><th>Completadas</th><th>Pendientes</th></tr>"
+        for a in alumnos_pendientes:
+            html += f"<tr><td>{a.get('matricula','')}</td><td>{a.get('nombre','')} {a.get('apellidop','')}</td><td>{a.get('correo','')}</td><td>{a.get('campus','')}</td><td>{a.get('carrera','')}</td><td>{a.get('total_requerido','')}</td><td>{a.get('completadas','')}</td><td>{a.get('pendientes','')}</td></tr>"
+        html += "</table>"
+
+    if evaluaciones:
+        html += "<h3>Evaluaciones</h3><table border='1' cellpadding='4' cellspacing='0'><tr>"
+        first = evaluaciones[0]
+        for k in first.keys():
+            html += f"<th>{k}</th>"
+        html += "</tr>"
+        for row in evaluaciones:
+            html += "<tr>"
+            for v in row.values():
+                html += f"<td>{v}</td>"
+            html += "</tr>"
+        html += "</table>"
+
+    text = "Reporte de Evaluación Docente\n"
+    text += f"Total campus: {stats.get('total_campus')}\nTotal alumnos: {stats.get('total_alumnos')}\n\n"
+    if alumnos_pendientes:
+        text += "Alumnos pendientes:\n"
+        for a in alumnos_pendientes:
+            text += f"- {a.get('matricula','')} {a.get('nombre','')} {a.get('apellidop','')} | {a.get('correo','')} | pendientes: {a.get('pendientes','')}\n"
+
+    smtp_server = os.environ.get('SMTP_SERVER')
+    smtp_port = int(os.environ.get('SMTP_PORT')) if os.environ.get('SMTP_PORT') else None
+    smtp_user = os.environ.get('SMTP_USER')
+    smtp_pass = os.environ.get('SMTP_PASSWORD')
+    sender = os.environ.get('SENDER_EMAIL') or smtp_user or 'no-reply@example.com'
+
+    msg = EmailMessage()
+    msg['Subject'] = 'Reportes - Evaluación Docente'
+    msg['From'] = sender
+    msg['To'] = ', '.join(recipients)
+    msg.set_content(text)
+    msg.add_alternative(html, subtype='html')
+
+    try:
+        if smtp_server and smtp_port:
+            if smtp_port == 465:
+                with smtplib.SMTP_SSL(smtp_server, smtp_port) as s:
+                    if smtp_user and smtp_pass:
+                        s.login(smtp_user, smtp_pass)
+                    s.send_message(msg)
+            else:
+                with smtplib.SMTP(smtp_server, smtp_port) as s:
+                    s.ehlo()
+                    if smtp_port == 587:
+                        s.starttls()
+                    if smtp_user and smtp_pass:
+                        s.login(smtp_user, smtp_pass)
+                    s.send_message(msg)
+        else:
+            with smtplib.SMTP('localhost') as s:
+                s.send_message(msg)
+    except Exception:
+        return redirect(url_for('admin', mail_sent='error'))
+
+    return redirect(url_for('admin', mail_sent='ok'))
 
 # Soporte GET y POST para mostrar el formulario de servicios 
 @app.route("/encuesta_servicios", methods=["GET", "POST"])

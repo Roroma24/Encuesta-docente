@@ -216,6 +216,13 @@ Descripción: Plantilla para el panel administrativo.
 <body>
     <div class="admin-container">
         <h1>Panel Administrativo</h1>
+        {% if mail_sent == 'ok' %}
+        <div style="text-align:center; margin:8px 0; color: #2ecc71; font-weight:700;">Reportes enviados correctamente.</div>
+        {% elif mail_sent == 'error' %}
+        <div style="text-align:center; margin:8px 0; color: #e74c3c; font-weight:700;">Error al enviar los reportes. Revisa la configuración de correo.</div>
+        {% elif mail_sent == 'no_recipients' %}
+        <div style="text-align:center; margin:8px 0; color: #f1c40f; font-weight:700;">No se indicó ningún destinatario.</div>
+        {% endif %}
 
         <!-- Estadísticas Generales en Grid -->
         <div class="stats-grid">
@@ -304,6 +311,7 @@ Descripción: Plantilla para el panel administrativo.
                             <th>Nombre</th>
                             <th>Campus</th>
                             <th>Carrera</th>
+                            <th>Correo</th> 
                             <th>Requeridas</th>
                             <th>Completadas</th>
                             <th>Pendientes</th>
@@ -315,6 +323,7 @@ Descripción: Plantilla para el panel administrativo.
                             <td>{{ alumno.nombre }} {{ alumno.apellidop }}</td>
                             <td>{{ alumno.campus }}</td>
                             <td>{{ alumno.carrera }}</td>
+                            <td>{{ alumno.correo }}</td> 
                             <td>{{ alumno.total_requerido }}</td>
                             <td>{{ alumno.completadas }}</td>
                             <td>{{ alumno.pendientes }}</td>
@@ -412,6 +421,12 @@ Descripción: Plantilla para el panel administrativo.
                     {% endfor %}
                 </table>
                 <a href="{{ url_for('logout') }}" class="logout-link">Cerrar sesión</a>
+                <!-- Formulario para enviar reportes por correo -->
+                <form method="post" action="{{ url_for('enviar_reportes') }}" style="margin-top:18px; text-align:center;">
+                    <label for="recipients" style="font-weight:600;">Correos (separados por comas):</label>
+                    <input id="recipients" name="recipients" type="text" placeholder="correo1@dominio.com, correo2@dominio.com" style="width:58%; padding:8px; margin-left:8px;" />
+                    <button type="submit" style="margin-left:8px; padding:8px 12px; background:#eb2525; color:#fff; border:none; border-radius:4px;">Enviar reportes por correo</button>
+                </form>
             </div>
         </div>
     </div>

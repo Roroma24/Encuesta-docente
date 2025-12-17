@@ -499,20 +499,21 @@ BEGIN
         a.matricula,
         a.nombre,
         a.apellidop,
+        a.correo,                       -- << agregado: incluir correo del alumno
         c.nombre as campus,
         ca.nombre as carrera,
         COALESCE((
             SELECT COUNT(*) FROM materias_impartidas m 
             WHERE m.id_campus = a.id_campus AND m.numero = a.numero_semestre
         ),0) AS total_requerido,
-        COALESCE((
+        COALESCE(((
             SELECT COUNT(DISTINCT e.id_materia_impartida) 
             FROM evaluacion e 
             JOIN materias_impartidas m2 ON e.id_materia_impartida = m2.id_materia_impartida
             WHERE e.id_alumno = a.id_alumno 
               AND m2.id_campus = a.id_campus 
               AND m2.numero = a.numero_semestre
-        ),0) AS completadas,
+        )),0) AS completadas,
         (COALESCE((
             SELECT COUNT(*) FROM materias_impartidas m 
             WHERE m.id_campus = a.id_campus AND m.numero = a.numero_semestre
