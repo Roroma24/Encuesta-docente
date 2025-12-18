@@ -8,7 +8,7 @@ Descripción: Plantilla para el panel administrativo.
 
 <head>
     <title>Panel Administrativo</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
     <style>
         .admin-container {
             max-width: 95%;
@@ -216,13 +216,7 @@ Descripción: Plantilla para el panel administrativo.
 <body>
     <div class="admin-container">
         <h1>Panel Administrativo</h1>
-        {% if mail_sent == 'ok' %}
-        <div style="text-align:center; margin:8px 0; color: #2ecc71; font-weight:700;">Reportes enviados correctamente.</div>
-        {% elif mail_sent == 'error' %}
-        <div style="text-align:center; margin:8px 0; color: #e74c3c; font-weight:700;">Error al enviar los reportes. Revisa la configuración de correo.</div>
-        {% elif mail_sent == 'no_recipients' %}
-        <div style="text-align:center; margin:8px 0; color: #f1c40f; font-weight:700;">No se indicó ningún destinatario.</div>
-        {% endif %}
+
 
         <!-- Estadísticas Generales en Grid -->
         <div class="stats-grid">
@@ -280,23 +274,42 @@ Descripción: Plantilla para el panel administrativo.
             <div class="stat-card">
                 <div class="stat-title">Leyenda de Promedios</div>
                 <div class="stat-content">
-                    <p style="margin:0 0 10px 0; font-weight:600;">Evaluaciones Académicas</p>
+                    <p style="margin: 0 0 10px 0; font-weight: 600">
+                        Evaluaciones Académicas
+                    </p>
                     <ul class="legend-list">
-                        <li class="legend-item"><span class="legend-swatch legend-high"></span> Mayor o igual a 4.5 — Excelente / Asignación de materias
+                        <li class="legend-item">
+                            <span class="legend-swatch legend-high"></span> Mayor o igual a
+                            4.5 — Excelente / Asignación de materias
                         </li>
-                        <li class="legend-item"><span class="legend-swatch legend-medium"></span> Entre 3.0 – 4.49 — En valoración
+                        <li class="legend-item">
+                            <span class="legend-swatch legend-medium"></span> Entre 3.0 –
+                            4.49 — En valoración
                         </li>
-                        <li class="legend-item"><span class="legend-swatch legend-low"></span> &lt; Menor a 3.0 — Sin asignación / Requiere mejora
+                        <li class="legend-item">
+                            <span class="legend-swatch legend-low"></span> &lt; Menor a 3.0
+                            — Sin asignación / Requiere mejora
                         </li>
                     </ul>
 
-                    <hr style="margin:12px 0; border:none; border-top:1px solid #eee;">
+                    <hr style="margin: 12px 0; border: none; border-top: 1px solid #eee" />
 
-                    <p style="margin:0 0 10px 0; font-weight:600;">Evaluaciones de Servicios</p>
+                    <p style="margin: 0 0 10px 0; font-weight: 600">
+                        Evaluaciones de Servicios
+                    </p>
                     <ul class="legend-list">
-                        <li class="legend-item"><span class="legend-swatch legend-high"></span> Mayor o igual 4.5 — Excelente</li>
-                        <li class="legend-item"><span class="legend-swatch legend-medium"></span> Entre 3.5 – 4.49 — Satisfactorio</li>
-                        <li class="legend-item"><span class="legend-swatch legend-low"></span> &lt; Menor a 3.5 — Requiere Atención</li>
+                        <li class="legend-item">
+                            <span class="legend-swatch legend-high"></span> Mayor o igual
+                            4.5 — Excelente
+                        </li>
+                        <li class="legend-item">
+                            <span class="legend-swatch legend-medium"></span> Entre 3.5 –
+                            4.49 — Satisfactorio
+                        </li>
+                        <li class="legend-item">
+                            <span class="legend-swatch legend-low"></span> &lt; Menor a 3.5
+                            — Requiere Atención
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -311,33 +324,32 @@ Descripción: Plantilla para el panel administrativo.
                             <th>Nombre</th>
                             <th>Campus</th>
                             <th>Carrera</th>
-                            <th>Correo</th> 
+                            <th>Correo</th>
                             <th>Requeridas</th>
                             <th>Completadas</th>
                             <th>Pendientes</th>
                         </tr>
-                        {% for alumno in stats.alumnos_estado %}
-                        {% if alumno.pendientes and alumno.pendientes|int > 0 %}
+                        {% for alumno in stats.alumnos_estado %} {% if alumno.pendientes
+                        and alumno.pendientes|int > 0 %}
                         <tr>
                             <td>{{ alumno.matricula }}</td>
                             <td>{{ alumno.nombre }} {{ alumno.apellidop }}</td>
                             <td>{{ alumno.campus }}</td>
                             <td>{{ alumno.carrera }}</td>
-                            <td>{{ alumno.correo }}</td> 
+                            <td>{{ alumno.correo }}</td>
                             <td>{{ alumno.total_requerido }}</td>
                             <td>{{ alumno.completadas }}</td>
                             <td>{{ alumno.pendientes }}</td>
                         </tr>
-                        {% endif %}
-                        {% endfor %}
+                        {% endif %} {% endfor %}
                     </table>
                 </div>
             </div>
-
-        </div> <!-- end .stats-grid -->
+        </div>
+        <!-- end .stats-grid -->
 
         <!-- Maestros - Tarjeta en la fila de abajo -->
-        <div class="stat-card" style="margin-bottom:20px;">
+        <div class="stat-card" style="margin-bottom: 20px">
             <div class="stat-title">Maestros - Estado de Evaluación</div>
             <div class="stat-content">
                 <table class="stat-table">
@@ -347,17 +359,17 @@ Descripción: Plantilla para el panel administrativo.
                         <th>Total Evaluaciones</th>
                         <th>Estado</th>
                     </tr>
-                    {% if maestros %}
-                        {% for m in maestros %}
-                        <tr>
-                            <td>{{ m.id_docente }}</td>
-                            <td>{{ m.nombre_docente }}</td>
-                            <td>{{ m.total_evaluaciones }}</td>
-                            <td>{{ m.estado }}</td>
-                        </tr>
-                        {% endfor %}
-                    {% else %}
-                        <tr><td colspan="4">No hay datos de maestros disponibles.</td></tr>
+                    {% if maestros %} {% for m in maestros %}
+                    <tr>
+                        <td>{{ m.id_docente }}</td>
+                        <td>{{ m.nombre_docente }}</td>
+                        <td>{{ m.total_evaluaciones }}</td>
+                        <td>{{ m.estado }}</td>
+                    </tr>
+                    {% endfor %} {% else %}
+                    <tr>
+                        <td colspan="4">No hay datos de maestros disponibles.</td>
+                    </tr>
                     {% endif %}
                 </table>
             </div>
@@ -378,7 +390,10 @@ Descripción: Plantilla para el panel administrativo.
                     </tr>
                     {% for eval in evaluaciones %}
                     <tr>
-                        <td>{{ eval.nombre_docente }} {{ eval.apellidop }} {{ eval.apellidom }}</td>
+                        <td>
+                            {{ eval.nombre_docente }} {{ eval.apellidop }} {{ eval.apellidom
+                            }}
+                        </td>
                         <td>{{ eval.campus_nombre }}</td>
                         <td>{{ eval.materia }}</td>
                         <td
@@ -422,13 +437,53 @@ Descripción: Plantilla para el panel administrativo.
                 </table>
                 <a href="{{ url_for('logout') }}" class="logout-link">Cerrar sesión</a>
                 <!-- Formulario para enviar reportes por correo -->
-                <form method="post" action="{{ url_for('enviar_reportes') }}" style="margin-top:18px; text-align:center;">
-                    <label for="recipients" style="font-weight:600;">Correos (separados por comas):</label>
-                    <input id="recipients" name="recipients" type="text" placeholder="correo1@dominio.com, correo2@dominio.com" style="width:58%; padding:8px; margin-left:8px;" />
-                    <button type="submit" style="margin-left:8px; padding:8px 12px; background:#eb2525; color:#fff; border:none; border-radius:4px;">Enviar reportes por correo</button>
-                </form>
             </div>
         </div>
+        <form method="post" action="{{ url_for('enviar_reportes') }}" style="margin-top: 18px; text-align: center">
+
+            <label for="recipients" style="font-weight: bold; color: #eb2525; font-size: 1.3em;">CORREOS (separados por comas):</label>
+            <input id="recipients" name="recipients" type="text" placeholder="correo1@dominio.com, correo2@dominio.com"
+                style="width: 58%; padding: 8px; margin-left: 8px" />
+            <button type="submit" style="
+            margin-left: 8px;
+            padding: 8px 12px;
+            background: #eb2525;
+            color: #fff;
+            border: none;
+            border-radius: 7px;
+            font-weight: bold;
+          ">
+                Enviar reportes por correo
+            </button>
+            {% if mail_sent == 'ok' %}
+            <div style="
+          text-align: center;
+          margin: 8px 0;
+          color: #2ecc71;
+          font-weight: 700;
+        ">
+                Reportes enviados correctamente.
+            </div>
+            {% elif mail_sent == 'error' %}
+            <div style="
+          text-align: center;
+          margin: 8px 0;
+          color: #e74c3c;
+          font-weight: 700;
+        ">
+                Error al enviar los reportes. Revisa la configuración de correo.
+            </div>
+            {% elif mail_sent == 'no_recipients' %}
+            <div style="
+          text-align: center;
+          margin: 8px 0;
+          color: #f1c40f;
+          font-weight: 700;
+        ">
+                No se indicó ningún destinatario.
+            </div>
+            {% endif %}
+        </form>
     </div>
 </body>
 
