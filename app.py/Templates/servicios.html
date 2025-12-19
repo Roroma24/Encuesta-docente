@@ -292,7 +292,6 @@ Descripción: Plantilla para la evaluación de servicios universitarios.
     <script>
         (function(){
             const form = document.querySelector("form[action=\"{{ url_for('guardar_servicios') }}\"]");
-            // If the template rendered a working selector, fallback to first form
             const targetForm = form || document.querySelector('form');
             if (!targetForm) return;
             targetForm.addEventListener('submit', function(e){

@@ -281,7 +281,6 @@ Descripción: Plantilla para la encuesta docente.
                     if (!(val >= 1 && val <= 5)) {
                         e.preventDefault();
                         alert('Por favor selecciona una calificación entre 1 y 5 en todas las preguntas.');
-                        // focus the corresponding slider if exists
                         const idx = h.id.replace('escala_val_','');
                         const slider = document.getElementById('escala_' + idx);
                         if (slider) slider.focus();
