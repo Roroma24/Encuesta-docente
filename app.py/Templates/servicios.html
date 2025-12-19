@@ -270,9 +270,11 @@ Descripción: Plantilla para la evaluación de servicios universitarios.
                 <span class="escala-num">5</span>
                 <!-- Slider para seleccionar la calificación -->
                 <div class="escala-slider-cell">
-                    <input type="range" class="red-range" name="escala_{{ loop.index }}" min="1" max="5" value="3"
-                        required oninput="document.getElementById('val_{{ loop.index }}').innerText = this.value;" />
-                    <span class="range-label" id="val_{{ loop.index }}">3</span>
+                    <!-- Slider entre 1-5; mostramos 0 como etiqueta inicial (no parte del slider) -->
+                    <input type="range" class="red-range" name="escala_{{ loop.index }}_slider" id="escala_{{ loop.index }}" min="1" max="5" value="1"
+                        oninput="document.getElementById('val_{{ loop.index }}').innerText = this.value; document.getElementById('escala_val_{{ loop.index }}').value = this.value;" />
+                    <span class="range-label" id="val_{{ loop.index }}">0</span>
+                    <input type="hidden" name="escala_{{ loop.index }}" id="escala_val_{{ loop.index }}" value="" />
                 </div>
                 <!-- Etiquetas descriptivas de la escala -->
                 <span class="escala-etiqueta">Deficiente</span>
@@ -287,6 +289,101 @@ Descripción: Plantilla para la evaluación de servicios universitarios.
 
         <button type="submit">Enviar Evaluación de Servicios</button>
     </form>
+    <script>
+        (function(){
+            const form = document.querySelector("form[action=\"{{ url_for('guardar_servicios') }}\"]");
+            // If the template rendered a working selector, fallback to first form
+            const targetForm = form || document.querySelector('form');
+            if (!targetForm) return;
+            targetForm.addEventListener('submit', function(e){
+                const hiddenVals = targetForm.querySelectorAll('input[type="hidden"][id^="escala_val_"]');
+                for (let h of hiddenVals) {
+                    const val = parseInt(h.value || '', 10);
+                    if (!(val >= 1 && val <= 5)) {
+                        e.preventDefault();
+                        alert('Por favor selecciona una calificación entre 1 y 5 en todas las preguntas.');
+                        const idx = h.id.replace('escala_val_','');
+                        const slider = document.getElementById('escala_' + idx);
+                        if (slider) slider.focus();
+                        return false;
+                    }
+                }
+            });
+
+            // Inicializar labels
+            const labels = document.querySelectorAll('.range-label');
+            labels.forEach(l => { if (!l.innerText) l.innerText = '0'; });
+
+            // Helpers
+            function setValueForIndex(idx, value) {
+                const label = document.getElementById('val_' + idx);
+                const hidden = document.getElementById('escala_val_' + idx);
+                const slider = document.getElementById('escala_' + idx);
+                if (label) label.innerText = value;
+                if (hidden) hidden.value = value;
+                if (slider) slider.value = value;
+            }
+
+            // Listeners en sliders
+            const sliders = targetForm.querySelectorAll('input[type="range"].red-range');
+            sliders.forEach(s => {
+                const id = s.id.replace('escala_','');
+                s.addEventListener('input', function(){
+                    const v = this.value;
+                    const lab = document.getElementById('val_' + id);
+                    const hid = document.getElementById('escala_val_' + id);
+                    if (lab) lab.innerText = v;
+                    if (hid) hid.value = v;
+                });
+                s.addEventListener('change', function(){
+                    const v = this.value;
+                    const lab = document.getElementById('val_' + id);
+                    const hid = document.getElementById('escala_val_' + id);
+                    if (lab) lab.innerText = v;
+                    if (hid) hid.value = v;
+                });
+                s.addEventListener('click', function(){
+                    const hid = document.getElementById('escala_val_' + id);
+                    if (hid && (hid.value === null || hid.value === '')) {
+                        const v = this.value;
+                        hid.value = v;
+                        const lab = document.getElementById('val_' + id);
+                        if (lab) lab.innerText = v;
+                    }
+                });
+            });
+
+            // Hacer los spans de número (1..5) clicables y accesibles por teclado
+            const numSpans = targetForm.querySelectorAll('.escala-num');
+            numSpans.forEach(span => {
+                span.setAttribute('tabindex','0');
+                span.setAttribute('role','button');
+                span.addEventListener('click', function(){
+                    const grid = this.closest('.escala-grid');
+                    if (!grid) return;
+                    const slider = grid.querySelector('input[type="range"].red-range');
+                    if (!slider) return;
+                    const idx = slider.id.replace('escala_','');
+                    const v = this.innerText.trim();
+                    setValueForIndex(idx, v);
+                    slider.focus();
+                });
+                span.addEventListener('keydown', function(e){
+                    if (e.key === 'Enter' || e.key === ' ' || /^[1-5]$/.test(e.key)) {
+                        e.preventDefault();
+                        const grid = this.closest('.escala-grid');
+                        if (!grid) return;
+                        const slider = grid.querySelector('input[type="range"].red-range');
+                        if (!slider) return;
+                        const idx = slider.id.replace('escala_','');
+                        const v = (/^[1-5]$/.test(e.key)) ? e.key : this.innerText.trim();
+                        setValueForIndex(idx, v);
+                        slider.focus();
+                    }
+                });
+            });
+        })();
+    </script>
 </body>
 
 </html>
